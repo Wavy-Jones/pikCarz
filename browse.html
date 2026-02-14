@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browse Vehicles — pikCarz | Powered by Cubeas</title>
+  <meta name="description" content="Browse new cars, used cars, motorbikes, trucks and more. Filter by make, model, price, location and more." />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23F05A1A'/><text y='.9em' font-size='70' x='10' fill='white' font-weight='900'>P</text></svg>" />
+</head>
+<body>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" role="dialog">
+  <button class="mobile-close"><svg viewBox="0 0 24 24" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <a href="index.html">Home</a>
+  <a href="browse.html">Browse Vehicles</a>
+  <a href="about.html">About Us</a>
+  <a href="contact.html">Contact</a>
+  <a href="#" style="color:var(--orange)">List Your Vehicle</a>
+</div>
+
+<!-- Navbar -->
+<header class="navbar">
+  <nav class="nav-inner">
+    <a href="index.html" class="logo">
+      <div class="logo-mark">P</div>
+      <div><div class="logo-text">pik<span>Carz</span></div><span class="logo-sub">Powered by Cubeas</span></div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="browse.html" class="active">Browse Vehicles</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="btn-ghost">Sign In</a>
+      <a href="#" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        List Vehicle
+      </a>
+    </div>
+    <button class="hamburger"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<!-- Page Hero -->
+<section class="page-hero">
+  <div class="container" style="position:relative;z-index:2">
+    <div class="breadcrumb"><a href="index.html">Home</a><span>/</span><span>Browse Vehicles</span></div>
+    <h1>Browse <span class="text-orange">Vehicles</span></h1>
+    <p style="color:var(--muted);margin-top:10px;font-size:1rem">Find your next car, bakkie, bike or truck from thousands of listings</p>
+    <!-- Search Bar -->
+    <div class="search-box" style="margin-top:28px;max-width:700px">
+      <select aria-label="Category">
+        <option value="">All Vehicles</option>
+        <option>New Cars</option>
+        <option>Used Cars</option>
+        <option>Motorbikes</option>
+        <option>Trucks &amp; Bakkies</option>
+        <option>Other</option>
+      </select>
+      <input type="text" placeholder="Search make, model, keyword…" />
+      <button class="btn-primary">Search</button>
+    </div>
+  </div>
+</section>
+
+<!-- Category Chips -->
+<div style="border-bottom:1px solid var(--border);padding:16px 0">
+  <div class="container"><div class="cat-row">
+    <button class="cat-chip active">All Vehicles</button>
+    <button class="cat-chip">New Cars</button>
+    <button class="cat-chip">Used Cars</button>
+    <button class="cat-chip">Motorbikes</button>
+    <button class="cat-chip">Trucks &amp; Bakkies</button>
+    <button class="cat-chip">Other</button>
+    <button id="filter-toggle" class="btn-ghost" style="margin-left:auto;display:none">⚙ Filters</button>
+  </div></div>
+</div>
+
+<!-- Browse Layout -->
+<section class="section">
+  <div class="container">
+    <div class="browse-layout">
+
+      <!-- Filter Panel -->
+      <aside class="filter-panel">
+        <h4>Filters <button onclick="document.querySelectorAll('.filter-group select').forEach(s=>s.selectedIndex=0)">Clear All</button></h4>
+
+        <div class="filter-group">
+          <label>Vehicle Type</label>
+          <select><option value="">All Types</option><option>New Car</option><option>Used Car</option><option>Motorbike</option><option>Truck / Bakkie</option><option>Other</option></select>
+        </div>
+
+        <div class="filter-group">
+          <label>Make</label>
+          <select><option value="">Any Make</option><option>BMW</option><option>Mercedes-Benz</option><option>Toyota</option><option>Volkswagen</option><option>Ford</option><option>Nissan</option><option>Audi</option><option>Honda</option><option>Porsche</option><option>Hyundai</option><option>Kawasaki</option><option>Yamaha</option><option>Suzuki</option></select>
+        </div>
+
+        <div class="filter-group">
+          <label>Model</label>
+          <input type="text" placeholder="e.g. Golf, Hilux, Ranger…" />
+        </div>
+
+        <div class="filter-group">
+          <label>Year</label>
+          <div class="price-range">
+            <select><option value="">From</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2015</option><option>2010</option></select>
+            <span>–</span>
+            <select><option value="">To</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option></select>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label>Price Range (ZAR)</label>
+          <div class="price-range">
+            <input type="text" placeholder="Min" />
+            <span>–</span>
+            <input type="text" placeholder="Max" />
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label>Province</label>
+          <select><option value="">All Provinces</option><option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Free State</option><option>Northern Cape</option></select>
+        </div>
+
+        <div class="filter-group">
+          <label>Transmission</label>
+          <div class="checkbox-list">
+            <label class="checkbox-item"><input type="checkbox" /> Automatic</label>
+            <label class="checkbox-item"><input type="checkbox" /> Manual</label>
+            <label class="checkbox-item"><input type="checkbox" /> Semi-Automatic</label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label>Fuel Type</label>
+          <div class="checkbox-list">
+            <label class="checkbox-item"><input type="checkbox" /> Petrol</label>
+            <label class="checkbox-item"><input type="checkbox" /> Diesel</label>
+            <label class="checkbox-item"><input type="checkbox" /> Electric</label>
+            <label class="checkbox-item"><input type="checkbox" /> Hybrid</label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label>Seller Type</label>
+          <div class="checkbox-list">
+            <label class="checkbox-item"><input type="checkbox" /> Private Seller</label>
+            <label class="checkbox-item"><input type="checkbox" /> Verified Dealer</label>
+          </div>
+        </div>
+
+        <button class="filter-btn">Apply Filters</button>
+      </aside>
+
+      <!-- Results -->
+      <div>
+        <div class="results-header">
+          <p class="results-count">Showing <strong>48</strong> of <strong>4,832</strong> vehicles</p>
+          <select class="sort-select" aria-label="Sort by">
+            <option>Sort: Featured First</option>
+            <option>Price: Low to High</option>
+            <option>Price: High to Low</option>
+            <option>Newest First</option>
+            <option>Lowest Mileage</option>
+          </select>
+        </div>
+
+        <div class="vehicles-grid">
+
+          <article class="vehicle-card">
+            <div class="card-img">
+              <img src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80" alt="BMW 3 Series" loading="lazy"/>
+              <span class="card-badge badge-used">Used</span>
+              <button class="card-save"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+            <div class="card-body">
+              <div class="card-make">BMW</div>
+              <div class="card-title">3 Series 320i M Sport</div>
+              <div class="card-price">R 389,000</div>
+              <div class="card-specs"><span class="spec-tag">2021</span><span class="spec-tag">42,000 km</span><span class="spec-tag">Auto</span><span class="spec-tag">Petrol</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-seller"><div class="seller-av">JD</div><span class="seller-name">Private Seller</span></div>
+              <div class="card-loc"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Johannesburg</div>
+            </div>
+          </article>
+
+          <article class="vehicle-card">
+            <div class="card-img">
+              <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80" alt="Porsche" loading="lazy"/>
+              <span class="card-badge badge-new">New</span>
+              <button class="card-save"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+            <div class="card-body">
+              <div class="card-make">Porsche</div>
+              <div class="card-title">911 Carrera 4S Cabriolet</div>
+              <div class="card-price">R 2,450,000</div>
+              <div class="card-specs"><span class="spec-tag">2024</span><span class="spec-tag">0 km</span><span class="spec-tag">Auto</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-seller"><div class="seller-av">GP</div><span class="seller-name">Verified Dealer</span></div>
+              <div class="card-loc"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Sandton</div>
+            </div>
+          </article>
+
+          <article class="vehicle-card">
+            <div class="card-img">
+              <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Kawasaki" loading="lazy"/>
+              <span class="card-badge badge-bike">Motorbike</span>
+              <button class="card-save"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+            <div class="card-body">
+              <div class="card-make">Kawasaki</div>
+              <div class="card-title">Ninja ZX-10R Performance</div>
+              <div class="card-price">R 189,900</div>
+              <div class="card-specs"><span class="spec-tag">2022</span><span class="spec-tag">8,200 km</span><span class="spec-tag">Manual</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-seller"><div class="seller-av">TM</div><span class="seller-name">Private Seller</span></div>
+              <div class="card-loc"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pretoria</div>
+            </div>
+          </article>
+
+          <article class="vehicle-card">
+            <div class="card-img">
+              <img src="https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=600&q=80" alt="Toyota Hilux" loading="lazy"/>
+              <span class="card-badge badge-truck">Truck</span>
+              <button class="card-save"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+            <div class="card-body">
+              <div class="card-make">Toyota</div>
+              <div class="card-title">Hilux 2.8 GD-6 4x4 Legend</div>
+              <div class="card-price">R 620,000</div>
+              <div class="card-specs"><span class="spec-tag">2023</span><span class="spec-tag">24,000 km</span><span class="spec-tag">Diesel</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-seller"><div class="seller-av">TG</div><span class="seller-name">Verified Dealer</span></div>
+              <div class="card-loc"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Cape Town</div>
+            </div>
+          </article>
+
+          <article class="vehicle-card">
+            <div class="card-img">
+              <img src="https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=600&q=80" alt="Mercedes" loading="lazy"/>
+              <span class="card-badge badge-used">Used</span>
+              <button class="card-save"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+            <div class="card-body">
+              <div class="card-make">Mercedes-Benz</div>
+              <div class="card-title">C-Class C200 AMG Line</div>
+              <div class="card-price">R 560,000</div>
+              <div class="card-specs"><span class="spec-tag">2022</span><span class="spec-tag">31,000 km</span><span class="spec-tag">Auto</span><span class="spec-tag">Petrol</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-seller"><div class="seller-av">SM</div><span class="seller-name">Star Motors</span></div>
+              <div class="card-loc"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Durban</div>
+            </div>
+          </article>
+
+          <article class="vehicle-card">
+            <div class="card-img">
+              <img src="https://images.unsplash.com/photo-1471444928139-48c5bf5173f8?w=600&q=80" alt="VW Golf" loading="lazy"/>
+              <span class="card-badge badge-used">Used</span>
+              <button class="card-save"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+            </div>
+            <div class="card-body">
+              <div class="card-make">Volkswagen</div>
+              <div class="card-title">Golf 8 GTI 2.0 TSI</div>
+              <div class="card-price">R 520,000</div>
+              <div class="card-specs"><span class="spec-tag">2023</span><span class="spec-tag">18,500 km</span><span class="spec-tag">Auto</span><span class="spec-tag">Petrol</span></div>
+            </div>
+            <div class="card-footer">
+              <div class="card-seller"><div class="seller-av">KP</div><span class="seller-name">Private Seller</span></div>
+              <div class="card-loc"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Johannesburg</div>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- Load More -->
+        <div style="text-align:center;margin-top:40px">
+          <button class="btn-primary" style="padding:14px 36px;font-size:0.95rem">Load More Vehicles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">pik<span>Carz</span></div><span class="logo-sub">Powered by Cubeas</span></div>
+        </a>
+        <p>South Africa's growing vehicle marketplace. Connect buyers and sellers with ease, trust, and simplicity.</p>
+      </div>
+      <div class="footer-col"><h5>Browse</h5><ul><li><a href="browse.html?type=new-cars">New Cars</a></li><li><a href="browse.html?type=used-cars">Used Cars</a></li><li><a href="browse.html?type=motorbikes">Motorbikes</a></li><li><a href="browse.html?type=trucks">Trucks &amp; Bakkies</a></li></ul></div>
+      <div class="footer-col"><h5>Sellers</h5><ul><li><a href="#">List a Vehicle</a></li><li><a href="#">Pricing &amp; Plans</a></li><li><a href="#">Dealer Registration</a></li></ul></div>
+      <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About pikCarz</a></li><li><a href="contact.html">Contact Us</a></li><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 pikCarz — A <strong>Cubeas</strong> product. All rights reserved.</p>
+      <div class="footer-socials">
+        <a href="#" class="social-btn"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+        <a href="#" class="social-btn"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="#" class="social-btn"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53A4.48 4.48 0 0 0 22.43.36a9 9 0 0 1-2.88 1.1 4.52 4.52 0 0 0-7.7 4.13A12.82 12.82 0 0 1 1.64.89 4.52 4.52 0 0 0 3 7.17a4.48 4.48 0 0 1-2-.55v.06a4.52 4.52 0 0 0 3.63 4.43 4.52 4.52 0 0 1-2 .08 4.52 4.52 0 0 0 4.22 3.14A9.06 9.06 0 0 1 1 19.54 12.77 12.77 0 0 0 7.88 21.5c8.26 0 12.77-6.84 12.77-12.77l-.01-.58A9.15 9.15 0 0 0 23 3z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
