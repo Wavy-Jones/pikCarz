@@ -11,8 +11,14 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     VERSION: str = "1.0.0"
     
-    # Database
-    DATABASE_URL: str
+    # Database (Vercel creates POSTGRES_PRISMA_URL automatically)
+    DATABASE_URL: Optional[str] = None
+    POSTGRES_PRISMA_URL: Optional[str] = None
+    
+    @property
+    def db_url(self) -> str:
+        """Get database URL, preferring POSTGRES_PRISMA_URL from Vercel"""
+        return self.POSTGRES_PRISMA_URL or self.DATABASE_URL or ""
     
     # Security
     SECRET_KEY: str
