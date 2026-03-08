@@ -8,10 +8,9 @@ sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
 alembic==1.13.1
 
-# Authentication
+# Authentication - Using Argon2 instead of bcrypt for Vercel compatibility
 python-jose[cryptography]==3.3.0
-passlib==1.7.4
-bcrypt==3.2.2
+passlib[argon2]==1.7.4
 python-decouple==3.8
 
 # Image Upload
