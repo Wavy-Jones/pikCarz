@@ -1,7 +1,7 @@
 """
 Vehicle API routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.database import get_db
@@ -10,6 +10,7 @@ from app.models.vehicle import Vehicle
 from app.models import VehicleStatus, VehicleCategory
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse, VehicleListResponse
 from app.core.deps import get_current_user
+from app.services.cloudinary import upload_multiple_vehicle_images, delete_vehicle_images
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
@@ -106,6 +107,80 @@ def list_vehicles(
         per_page=per_page,
         vehicles=vehicle_responses
     )
+
+@router.post("/{vehicle_id}/images", response_model=VehicleResponse)
+async def upload_vehicle_images(
+    vehicle_id: int,
+    files: List[UploadFile] = File(..., description="Vehicle images (max 10)"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload images for a vehicle (owner only)"""
+    
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    
+    # Check ownership
+    if vehicle.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload images for this vehicle")
+    
+    # Upload images to Cloudinary
+    image_urls = await upload_multiple_vehicle_images(files, vehicle_id)
+    
+    # Update vehicle images (append to existing)
+    current_images = vehicle.images or []
+    vehicle.images = current_images + image_urls
+    
+    db.commit()
+    db.refresh(vehicle)
+    
+    # Add seller info
+    response = VehicleResponse.model_validate(vehicle)
+    response.seller_name = current_user.business_name or current_user.full_name
+    response.seller_type = current_user.role
+    response.is_verified = current_user.is_verified_dealer if current_user.role == "dealer" else False
+    
+    return response
+
+@router.delete("/{vehicle_id}/images/{image_index}", response_model=VehicleResponse)
+def delete_vehicle_image(
+    vehicle_id: int,
+    image_index: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a specific image from a vehicle (owner only)"""
+    
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    
+    # Check ownership
+    if vehicle.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete images for this vehicle")
+    
+    if not vehicle.images or image_index >= len(vehicle.images):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Delete from Cloudinary
+    image_url = vehicle.images[image_index]
+    delete_vehicle_images([image_url])
+    
+    # Remove from database
+    vehicle.images.pop(image_index)
+    db.commit()
+    db.refresh(vehicle)
+    
+    # Add seller info
+    response = VehicleResponse.model_validate(vehicle)
+    response.seller_name = current_user.business_name or current_user.full_name
+    response.seller_type = current_user.role
+    response.is_verified = current_user.is_verified_dealer if current_user.role == "dealer" else False
+    
+    return response
 
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
 def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):

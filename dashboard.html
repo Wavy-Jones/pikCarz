@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - pikCarz</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <img src="Logo.png" alt="pikCarz" class="logo-img">
+            </a>
+            <div class="nav-links">
+                <a href="browse.html">Browse</a>
+                <a href="dashboard.html" class="active">Dashboard</a>
+                <div class="user-menu" id="user-menu">
+                    <span class="user-name"></span>
+                    <button onclick="logout()" class="btn-secondary">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="container dashboard-container">
+        <div class="dashboard-header">
+            <h1>My Dashboard</h1>
+            <button onclick="showCreateListingModal()" class="btn-primary">
+                + Create New Listing
+            </button>
+        </div>
+
+        <!-- Subscription Info -->
+        <div class="subscription-card" id="subscription-info">
+            <h3>Current Subscription</h3>
+            <div class="subscription-details">
+                <p class="subscription-tier">Loading...</p>
+                <p class="subscription-expires">Expires: --</p>
+            </div>
+            <button onclick="showSubscriptionPlans()" class="btn-secondary">Upgrade Plan</button>
+        </div>
+
+        <!-- User Stats -->
+        <div class="stats-grid" id="user-stats">
+            <div class="stat-card">
+                <h4>Active Listings</h4>
+                <p class="stat-value" id="stat-active">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>Pending Approval</h4>
+                <p class="stat-value" id="stat-pending">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>Total Views</h4>
+                <p class="stat-value" id="stat-views">0</p>
+            </div>
+        </div>
+
+        <!-- My Listings -->
+        <div class="my-listings-section">
+            <h2>My Listings</h2>
+            <div id="my-listings-grid" class="listings-grid">
+                <p>Loading your listings...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Listing Modal -->
+    <div id="create-listing-modal" class="modal">
+        <div class="modal-content large">
+            <span class="close" onclick="closeCreateListingModal()">&times;</span>
+            <h2>Create New Listing</h2>
+            
+            <form id="create-listing-form" onsubmit="handleCreateListing(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Make *</label>
+                        <input type="text" id="vehicle-make" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Model *</label>
+                        <input type="text" id="vehicle-model" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Year *</label>
+                        <input type="number" id="vehicle-year" min="1900" max="2026" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Price (R) *</label>
+                        <input type="number" id="vehicle-price" min="0" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Mileage (km) *</label>
+                        <input type="number" id="vehicle-mileage" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <select id="vehicle-category" required>
+                            <option value="used_car">Used Car</option>
+                            <option value="new_car">New Car</option>
+                            <option value="motorcycle">Motorcycle</option>
+                            <option value="truck">Truck</option>
+                            <option value="van">Van</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Transmission *</label>
+                        <select id="vehicle-transmission" required>
+                            <option value="Automatic">Automatic</option>
+                            <option value="Manual">Manual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fuel Type *</label>
+                        <select id="vehicle-fuel" required>
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Color *</label>
+                        <input type="text" id="vehicle-color" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Province *</label>
+                        <select id="vehicle-province" required>
+                            <option value="Gauteng">Gauteng</option>
+                            <option value="Western Cape">Western Cape</option>
+                            <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                            <option value="Eastern Cape">Eastern Cape</option>
+                            <option value="Limpopo">Limpopo</option>
+                            <option value="Mpumalanga">Mpumalanga</option>
+                            <option value="North West">North West</option>
+                            <option value="Free State">Free State</option>
+                            <option value="Northern Cape">Northern Cape</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>City *</label>
+                    <input type="text" id="vehicle-city" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="vehicle-title" placeholder="e.g. 2020 BMW 3 Series - Excellent Condition" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea id="vehicle-description" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Images (Max 10)</label>
+                    <input type="file" id="vehicle-images" multiple accept="image/*">
+                    <p class="form-hint">Select up to 10 images. You can add more later.</p>
+                </div>
+
+                <div class="form-error" id="create-listing-error"></div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeCreateListingModal()" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Listing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subscription Plans Modal -->
+    <div id="subscription-modal" class="modal">
+        <div class="modal-content large">
+            <span class="close" onclick="closeSubscriptionModal()">&times;</span>
+            <h2>Choose Your Plan</h2>
+            <div id="subscription-plans-grid" class="plans-grid">
+                Loading plans...
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
