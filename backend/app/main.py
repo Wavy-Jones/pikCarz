@@ -13,7 +13,7 @@ from app.models.vehicle import Vehicle
 from app.models.payment import Payment
 
 # Import routers
-from app.api import auth, vehicles, subscriptions, admin
+from app.api import auth, vehicles, admin
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -37,7 +37,6 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(vehicles.router)
-app.include_router(subscriptions.router)
 app.include_router(admin.router)
 
 @app.get("/")
