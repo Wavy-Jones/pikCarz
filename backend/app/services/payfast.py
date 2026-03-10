@@ -1,87 +1,99 @@
 """
-PayFast payment integration service
+PayFast payment gateway integration
 """
 import hashlib
 from urllib.parse import urlencode
-from app.config import settings, PAYFAST_URL
+from app.config import settings
 
-def generate_payment_signature(data: dict) -> str:
-    """Generate PayFast payment signature"""
+def generate_payment_url(payment_id: int, amount: float, item_name: str, user_email: str, user_name: str) -> str:
+    """
+    Generate PayFast payment URL
+    
+    PayFast requires specific parameters to be sent
+    Returns the payment URL that user should be redirected to
+    """
+    
+    # PayFast merchant details (from environment variables)
+    merchant_id = settings.PAYFAST_MERCHANT_ID
+    merchant_key = settings.PAYFAST_MERCHANT_KEY
+    
+    # PayFast URLs
+    if settings.PAYFAST_MODE == "sandbox":
+        payfast_url = "https://sandbox.payfast.co.za/eng/process"
+    else:
+        payfast_url = "https://www.payfast.co.za/eng/process"
+    
+    # Build payment data
+    payment_data = {
+        'merchant_id': merchant_id,
+        'merchant_key': merchant_key,
+        'return_url': f'{settings.FRONTEND_URL}/payment-success',
+        'cancel_url': f'{settings.FRONTEND_URL}/payment-cancelled',
+        'notify_url': f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast',
+        'name_first': user_name.split()[0] if ' ' in user_name else user_name,
+        'name_last': user_name.split()[-1] if ' ' in user_name else '',
+        'email_address': user_email,
+        'amount': f'{amount:.2f}',
+        'item_name': item_name,
+        'm_payment_id': str(payment_id),  # Our internal payment ID
+        'email_confirmation': '1',
+        'confirmation_address': user_email
+    }
+    
+    # Generate signature
+    signature = generate_signature(payment_data)
+    payment_data['signature'] = signature
+    
+    # Build payment URL
+    query_string = urlencode(payment_data)
+    payment_url = f'{payfast_url}?{query_string}'
+    
+    return payment_url
+
+def generate_signature(data: dict, passphrase: str = None) -> str:
+    """
+    Generate PayFast signature for data validation
+    
+    PayFast requires a signature to verify the request hasn't been tampered with
+    """
+    if passphrase is None:
+        passphrase = settings.PAYFAST_PASSPHRASE
     
     # Create parameter string
     param_string = ""
     for key in sorted(data.keys()):
-        param_string += f"{key}={data[key]}&"
+        if key != 'signature':
+            param_string += f'{key}={urlencode({key: data[key]})}&'
     
     # Remove last ampersand
-    param_string = param_string[:-1]
+    param_string = param_string.rstrip('&')
     
-    # Add passphrase if configured
-    if settings.PAYFAST_PASSPHRASE:
-        param_string += f"&passphrase={settings.PAYFAST_PASSPHRASE}"
+    # Add passphrase if provided
+    if passphrase:
+        param_string += f'&passphrase={passphrase}'
     
-    # Generate signature
+    # Generate MD5 hash
     signature = hashlib.md5(param_string.encode()).hexdigest()
     
     return signature
 
-def generate_payment_url(
-    amount: float,
-    item_name: str,
-    item_description: str,
-    email_address: str,
-    name_first: str,
-    name_last: str,
-    m_payment_id: str,
-    user_id: int
-) -> str:
-    """
-    Generate PayFast payment URL
-    Returns the complete payment URL with signature
-    """
-    
-    # Build payment data
-    data = {
-        "merchant_id": settings.PAYFAST_MERCHANT_ID,
-        "merchant_key": settings.PAYFAST_MERCHANT_KEY,
-        "return_url": f"{settings.FRONTEND_URL}/payment/success",
-        "cancel_url": f"{settings.FRONTEND_URL}/payment/cancelled",
-        "notify_url": f"https://pikcarz.vercel.app/api/subscriptions/webhook/payfast",
-        "name_first": name_first,
-        "name_last": name_last,
-        "email_address": email_address,
-        "m_payment_id": m_payment_id,
-        "amount": f"{amount:.2f}",
-        "item_name": item_name,
-        "item_description": item_description,
-        "custom_int1": user_id,
-        "email_confirmation": "1",
-        "confirmation_address": email_address
-    }
-    
-    # Generate signature
-    data["signature"] = generate_payment_signature(data)
-    
-    # Build URL
-    payment_url = f"{PAYFAST_URL}?{urlencode(data)}"
-    
-    return payment_url
-
 def verify_payfast_signature(data: dict) -> bool:
     """
-    Verify PayFast ITN signature
-    Returns True if signature is valid
-    """
+    Verify PayFast ITN (Instant Transaction Notification) signature
     
-    # Extract signature from data
-    signature = data.get("signature")
-    if not signature:
+    This ensures the webhook data came from PayFast and hasn't been tampered with
+    """
+    # Get signature from data
+    received_signature = data.get('signature', '')
+    
+    if not received_signature:
         return False
     
-    # Remove signature from data for verification
-    verification_data = {k: v for k, v in data.items() if k != "signature"}
+    # Create a copy without the signature
+    data_without_sig = {k: v for k, v in data.items() if k != 'signature'}
     
     # Generate expected signature
-    expected_signature = generate_payment_signature(verification_data)
+    expected_signature = generate_signature(data_without_sig)
     
-    return signature == expected_signature
+    # Compare signatures
+    return received_signature == expected_signature

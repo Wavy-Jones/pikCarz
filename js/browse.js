@@ -1,142 +1,233 @@
-/**
- * Browse Vehicles - Live API Integration
- */
+/* ============================================
+   pikCarz Browse Page - Real API Integration
+   ============================================ */
 
-let currentPage = 1;
-let currentFilters = {};
-
-// Load vehicles from API
-async function loadVehicles(page = 1, filters = {}) {
-    const vehiclesGrid = document.getElementById('vehicles-grid');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    
-    // Show loading
-    if (loadingSpinner) loadingSpinner.style.display = 'block';
-    if (vehiclesGrid) vehiclesGrid.innerHTML = '';
-
-    try {
-        const params = { page, per_page: 20, ...filters };
-        const response = await api.getVehicles(params);
-        
-        if (vehiclesGrid) {
-            if (response.vehicles && response.vehicles.length > 0) {
-                vehiclesGrid.innerHTML = response.vehicles.map(vehicle => createVehicleCard(vehicle)).join('');
-            } else {
-                vehiclesGrid.innerHTML = '<p class="no-results">No vehicles found. Try adjusting your filters.</p>';
-            }
-        }
-
-        // Update pagination
-        updatePagination(response.page, Math.ceil(response.total / response.per_page));
-        
-    } catch (error) {
-        console.error('Error loading vehicles:', error);
-        if (vehiclesGrid) {
-            vehiclesGrid.innerHTML = '<p class="error">Failed to load vehicles. Please try again.</p>';
-        }
-    } finally {
-        if (loadingSpinner) loadingSpinner.style.display = 'none';
+document.addEventListener('DOMContentLoaded', async () => {
+  
+  // Current filters
+  let currentFilters = {
+    page: 1,
+    per_page: 20,
+    category: '',
+    make: '',
+    min_price: '',
+    max_price: '',
+    province: ''
+  };
+  
+  // Load vehicles on page load
+  await loadVehicles();
+  
+  // Apply Filters button
+  document.querySelector('.filter-btn')?.addEventListener('click', async () => {
+    currentFilters.page = 1; // Reset to page 1
+    await loadVehicles();
+  });
+  
+  // Sort dropdown
+  document.querySelector('.sort-select')?.addEventListener('change', async () => {
+    await loadVehicles();
+  });
+  
+  // Category chips
+  document.querySelectorAll('.cat-chip').forEach(chip => {
+    chip.addEventListener('click', async (e) => {
+      const button = e.currentTarget;
+      const category = button.textContent.trim().toLowerCase();
+      
+      // Map display names to API values
+      const categoryMap = {
+        'all vehicles': '',
+        'new cars': 'new_car',
+        'used cars': 'used_car',
+        'motorbikes': 'motorcycle',
+        'trucks & bakkies': 'truck',
+        'other': 'other'
+      };
+      
+      currentFilters.category = categoryMap[category] || '';
+      currentFilters.page = 1;
+      
+      await loadVehicles();
+    });
+  });
+  
+  // Load More button
+  document.querySelector('.btn-primary')?.addEventListener('click', async (e) => {
+    if (e.target.textContent.includes('Load More')) {
+      currentFilters.page++;
+      await loadVehicles(true); // Append mode
     }
-}
-
-// Create vehicle card HTML
-function createVehicleCard(vehicle) {
-    const image = vehicle.images && vehicle.images.length > 0 
-        ? vehicle.images[0] 
-        : 'https://via.placeholder.com/400x300?text=No+Image';
+  });
+  
+  // Main function to load vehicles
+  async function loadVehicles(append = false) {
+    const gridContainer = document.querySelector('.vehicles-grid');
+    const resultsCount = document.querySelector('.results-count');
     
-    const verifiedBadge = vehicle.is_verified 
-        ? '<span class="verified-badge">✓ Verified Dealer</span>' 
-        : '';
+    if (!gridContainer) return;
+    
+    // Show loading state
+    if (!append) {
+      gridContainer.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:60px; color:var(--muted)">Loading vehicles...</p>';
+    }
+    
+    try {
+      // Get filter values from form
+      updateFiltersFromForm();
+      
+      // Fetch vehicles from API
+      const data = await vehicleAPI.getVehicles(currentFilters);
+      
+      // Update results count
+      if (resultsCount) {
+        const showing = append ? gridContainer.querySelectorAll('.vehicle-card').length + data.vehicles.length : data.vehicles.length;
+        resultsCount.innerHTML = `Showing <strong>${showing}</strong> of <strong>${data.total}</strong> vehicles`;
+      }
+      
+      // Render vehicles
+      if (data.vehicles.length === 0 && !append) {
+        gridContainer.innerHTML = `
+          <div style="grid-column: 1/-1; text-align:center; padding:80px 20px;">
+            <svg viewBox="0 0 24 24" width="64" height="64" stroke="var(--muted)" fill="none" stroke-width="2" style="margin:0 auto 24px">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h3 style="color:var(--white); margin-bottom:12px;">No Vehicles Found</h3>
+            <p style="color:var(--muted)">Try adjusting your filters or browse all vehicles.</p>
+            <button onclick="window.location.reload()" class="btn-primary" style="margin-top:24px">Clear Filters</button>
+          </div>
+        `;
+        return;
+      }
+      
+      const vehiclesHTML = data.vehicles.map(createVehicleCard).join('');
+      
+      if (append) {
+        gridContainer.insertAdjacentHTML('beforeend', vehiclesHTML);
+      } else {
+        gridContainer.innerHTML = vehiclesHTML;
+      }
+      
+      // Hide/show Load More button
+      const loadMoreBtn = document.querySelector('.btn-primary');
+      if (loadMoreBtn && loadMoreBtn.textContent.includes('Load More')) {
+        const totalLoaded = gridContainer.querySelectorAll('.vehicle-card').length;
+        loadMoreBtn.style.display = totalLoaded >= data.total ? 'none' : 'block';
+      }
+      
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
+      gridContainer.innerHTML = `
+        <div style="grid-column: 1/-1; text-align:center; padding:60px; color:#ef4444;">
+          <h3>Error Loading Vehicles</h3>
+          <p>${error.message}</p>
+          <button onclick="window.location.reload()" class="btn-primary" style="margin-top:20px">Retry</button>
+        </div>
+      `;
+    }
+  }
+  
+  // Update filters from form inputs
+  function updateFiltersFromForm() {
+    // Vehicle type
+    const typeSelect = document.querySelector('.filter-group select');
+    if (typeSelect?.value) {
+      const categoryMap = {
+        'New Car': 'new_car',
+        'Used Car': 'used_car',
+        'Motorbike': 'motorcycle',
+        'Truck / Bakkie': 'truck',
+        'Other': 'other'
+      };
+      currentFilters.category = categoryMap[typeSelect.value] || '';
+    }
+    
+    // Make
+    const makeInputs = document.querySelectorAll('.filter-group select');
+    if (makeInputs[1]?.value) {
+      currentFilters.make = makeInputs[1].value;
+    }
+    
+    // Price range
+    const priceInputs = document.querySelectorAll('.price-range input');
+    if (priceInputs[0]?.value) currentFilters.min_price = priceInputs[0].value;
+    if (priceInputs[1]?.value) currentFilters.max_price = priceInputs[1].value;
+    
+    // Province
+    const provinceSelect = document.querySelector('.filter-group select:last-of-type');
+    if (provinceSelect?.value) {
+      currentFilters.province = provinceSelect.value;
+    }
+  }
+  
+  // Create vehicle card HTML
+  function createVehicleCard(vehicle) {
+    const badgeClass = vehicle.category === 'new_car' ? 'badge-new' : 
+                      vehicle.category === 'used_car' ? 'badge-used' :
+                      vehicle.category === 'motorcycle' ? 'badge-bike' : 'badge-truck';
+    
+    const badgeText = vehicle.category === 'new_car' ? 'New' :
+                     vehicle.category === 'used_car' ? 'Used' :
+                     vehicle.category === 'motorcycle' ? 'Motorbike' : 'Truck';
+    
+    // Use placeholder image if no images
+    const imageUrl = vehicle.images && vehicle.images.length > 0 
+      ? vehicle.images[0] 
+      : 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80';
+    
+    const verifiedBadge = vehicle.is_verified ? '<span class="card-badge badge-featured" style="left:auto;right:12px;top:50px;">Verified</span>' : '';
     
     return `
-        <div class="vehicle-card" onclick="viewVehicle(${vehicle.id})">
-            <div class="vehicle-image" style="background-image: url('${image}')">
-                ${vehicle.status === 'featured' ? '<span class="featured-badge">Featured</span>' : ''}
-            </div>
-            <div class="vehicle-info">
-                <h3 class="vehicle-title">${vehicle.title}</h3>
-                <p class="vehicle-price">R ${vehicle.price.toLocaleString()}</p>
-                <div class="vehicle-details">
-                    <span>${vehicle.year}</span> • 
-                    <span>${vehicle.mileage.toLocaleString()} km</span> • 
-                    <span>${vehicle.transmission}</span>
-                </div>
-                <p class="vehicle-location">${vehicle.city}, ${vehicle.province}</p>
-                <div class="seller-info">
-                    ${verifiedBadge}
-                    <span class="seller-name">${vehicle.seller_name}</span>
-                </div>
-            </div>
+      <article class="vehicle-card" onclick="window.location='vehicle-detail.html?id=${vehicle.id}'">
+        <div class="card-img">
+          <img src="${imageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80'"/>
+          <span class="card-badge ${badgeClass}">${badgeText}</span>
+          ${verifiedBadge}
+          <button class="card-save" onclick="event.stopPropagation(); toggleSave(this)">
+            <svg viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
         </div>
+        <div class="card-body">
+          <div class="card-make">${vehicle.make}</div>
+          <div class="card-title">${vehicle.model}</div>
+          <div class="card-price">R ${vehicle.price.toLocaleString()}</div>
+          <div class="card-specs">
+            <span class="spec-tag">${vehicle.year}</span>
+            <span class="spec-tag">${vehicle.mileage.toLocaleString()} km</span>
+            <span class="spec-tag">${vehicle.transmission}</span>
+            ${vehicle.fuel_type ? `<span class="spec-tag">${vehicle.fuel_type}</span>` : ''}
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="card-seller">
+            <div class="seller-av">${vehicle.seller_name.substring(0, 2).toUpperCase()}</div>
+            <span class="seller-name">${vehicle.seller_name}</span>
+          </div>
+          <div class="card-loc">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            ${vehicle.city}
+          </div>
+        </div>
+      </article>
     `;
-}
-
-// View vehicle details
-function viewVehicle(id) {
-    window.location.href = `vehicle-detail.html?id=${id}`;
-}
-
-// Update pagination
-function updatePagination(current, total) {
-    const pagination = document.getElementById('pagination');
-    if (!pagination) return;
-
-    let html = '';
-    
-    // Previous button
-    if (current > 1) {
-        html += `<button onclick="loadVehicles(${current - 1}, currentFilters)" class="btn-pagination">Previous</button>`;
+  }
+  
+  // Toggle save/wishlist
+  window.toggleSave = function(btn) {
+    btn.classList.toggle('saved');
+    const svg = btn.querySelector('svg');
+    if (btn.classList.contains('saved')) {
+      svg.style.fill = '#F05A1A';
+      svg.style.stroke = '#F05A1A';
+    } else {
+      svg.style.fill = 'none';
+      svg.style.stroke = 'var(--white)';
     }
-    
-    // Page numbers
-    html += `<span class="page-info">Page ${current} of ${total}</span>`;
-    
-    // Next button
-    if (current < total) {
-        html += `<button onclick="loadVehicles(${current + 1}, currentFilters)" class="btn-pagination">Next</button>`;
-    }
-    
-    pagination.innerHTML = html;
-}
-
-// Apply filters
-function applyFilters() {
-    const filters = {
-        category: document.getElementById('filter-category')?.value || '',
-        make: document.getElementById('filter-make')?.value || '',
-        min_price: document.getElementById('filter-min-price')?.value || '',
-        max_price: document.getElementById('filter-max-price')?.value || '',
-        province: document.getElementById('filter-province')?.value || ''
-    };
-
-    // Remove empty filters
-    Object.keys(filters).forEach(key => {
-        if (!filters[key]) delete filters[key];
-    });
-
-    currentFilters = filters;
-    loadVehicles(1, filters);
-}
-
-// Reset filters
-function resetFilters() {
-    const form = document.getElementById('filters-form');
-    if (form) form.reset();
-    currentFilters = {};
-    loadVehicles(1);
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadVehicles();
-    
-    // Set up filter form
-    const filterForm = document.getElementById('filters-form');
-    if (filterForm) {
-        filterForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            applyFilters();
-        });
-    }
+  };
+  
 });

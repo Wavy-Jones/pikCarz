@@ -1,2 +1,2 @@
 """API routes module"""
-from app.api import auth, vehicles, admin
+from app.api import auth, vehicles, admin, subscriptions

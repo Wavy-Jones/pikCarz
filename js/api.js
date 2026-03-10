@@ -1,194 +1,165 @@
-/**
- * pikCarz API Client
- * Connects frontend to live backend API
- */
+/* ============================================
+   pikCarz API Integration
+   Connects frontend to backend API
+   ============================================ */
 
-const API_BASE_URL = 'https://pikcarz.vercel.app';
+// API Configuration
+const API_CONFIG = {
+  BASE_URL: 'https://pikcarz.vercel.app',
+  TIMEOUT: 10000
+};
 
-class PikCarzAPI {
-    constructor() {
-        this.baseURL = API_BASE_URL;
-        this.token = localStorage.getItem('access_token');
+// API Helper Functions
+const api = {
+  // Generic fetch wrapper with error handling
+  async request(endpoint, options = {}) {
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const token = localStorage.getItem('auth_token');
+    
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...options.headers
+      },
+      ...options
+    };
+    
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+        throw new Error(error.detail || `HTTP ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
     }
+  },
+  
+  // GET request
+  async get(endpoint, params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    return this.request(url, { method: 'GET' });
+  },
+  
+  // POST request
+  async post(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  
+  // PUT request
+  async put(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  
+  // DELETE request
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
+  }
+};
 
-    // Helper: Make authenticated request
-    async request(endpoint, options = {}) {
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers
-        };
+// Vehicle API
+const vehicleAPI = {
+  // Get all vehicles with filters
+  async getVehicles(filters = {}) {
+    const params = {
+      page: filters.page || 1,
+      per_page: filters.per_page || 20,
+      status: 'active', // Only show active vehicles
+      ...(filters.category && { category: filters.category }),
+      ...(filters.make && { make: filters.make }),
+      ...(filters.min_price && { min_price: filters.min_price }),
+      ...(filters.max_price && { max_price: filters.max_price }),
+      ...(filters.province && { province: filters.province })
+    };
+    
+    return api.get('/api/vehicles', params);
+  },
+  
+  // Get single vehicle by ID
+  async getVehicle(id) {
+    return api.get(`/api/vehicles/${id}`);
+  },
+  
+  // Create new vehicle listing (requires auth)
+  async createVehicle(vehicleData) {
+    return api.post('/api/vehicles', vehicleData);
+  },
+  
+  // Update vehicle (requires auth)
+  async updateVehicle(id, vehicleData) {
+    return api.put(`/api/vehicles/${id}`, vehicleData);
+  },
+  
+  // Delete vehicle (requires auth)
+  async deleteVehicle(id) {
+    return api.delete(`/api/vehicles/${id}`);
+  },
+  
+  // Get user's own listings (requires auth)
+  async getMyVehicles(page = 1) {
+    return api.get('/api/vehicles/my/listings', { page, per_page: 20 });
+  }
+};
 
-        if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
-        }
-
-        const config = {
-            ...options,
-            headers
-        };
-
-        try {
-            const response = await fetch(`${this.baseURL}${endpoint}`, config);
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Request failed');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('API Error:', error);
-            throw error;
-        }
+// Auth API
+const authAPI = {
+  // Register new user
+  async register(userData) {
+    const response = await api.post('/api/auth/register', userData);
+    if (response.access_token) {
+      localStorage.setItem('auth_token', response.access_token);
+      localStorage.setItem('user_data', JSON.stringify(response.user));
     }
-
-    // Auth Methods
-    async register(userData) {
-        const response = await this.request('/api/auth/register', {
-            method: 'POST',
-            body: JSON.stringify(userData)
-        });
-        
-        if (response.access_token) {
-            this.setToken(response.access_token);
-        }
-        
-        return response;
+    return response;
+  },
+  
+  // Login user
+  async login(email, password) {
+    const response = await api.post('/api/auth/login', { email, password });
+    if (response.access_token) {
+      localStorage.setItem('auth_token', response.access_token);
+      localStorage.setItem('user_data', JSON.stringify(response.user));
     }
+    return response;
+  },
+  
+  // Get current user info
+  async getCurrentUser() {
+    return api.get('/api/auth/me');
+  },
+  
+  // Logout
+  logout() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    window.location.href = 'index.html';
+  },
+  
+  // Check if user is logged in
+  isAuthenticated() {
+    return !!localStorage.getItem('auth_token');
+  },
+  
+  // Get stored user data
+  getUser() {
+    const userData = localStorage.getItem('user_data');
+    return userData ? JSON.parse(userData) : null;
+  }
+};
 
-    async login(email, password) {
-        const response = await this.request('/api/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
-        });
-        
-        if (response.access_token) {
-            this.setToken(response.access_token);
-        }
-        
-        return response;
-    }
-
-    async getCurrentUser() {
-        return await this.request('/api/auth/me');
-    }
-
-    setToken(token) {
-        this.token = token;
-        localStorage.setItem('access_token', token);
-    }
-
-    logout() {
-        this.token = null;
-        localStorage.removeItem('access_token');
-    }
-
-    isAuthenticated() {
-        return !!this.token;
-    }
-
-    // Vehicle Methods
-    async getVehicles(filters = {}) {
-        const params = new URLSearchParams(filters);
-        return await this.request(`/api/vehicles?${params}`);
-    }
-
-    async getVehicle(id) {
-        return await this.request(`/api/vehicles/${id}`);
-    }
-
-    async createVehicle(vehicleData) {
-        return await this.request('/api/vehicles', {
-            method: 'POST',
-            body: JSON.stringify(vehicleData)
-        });
-    }
-
-    async updateVehicle(id, vehicleData) {
-        return await this.request(`/api/vehicles/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(vehicleData)
-        });
-    }
-
-    async deleteVehicle(id) {
-        return await this.request(`/api/vehicles/${id}`, {
-            method: 'DELETE'
-        });
-    }
-
-    async getMyVehicles(page = 1) {
-        return await this.request(`/api/vehicles/my/listings?page=${page}`);
-    }
-
-    async uploadVehicleImages(vehicleId, files) {
-        const formData = new FormData();
-        
-        for (let file of files) {
-            formData.append('files', file);
-        }
-
-        const response = await fetch(`${this.baseURL}/api/vehicles/${vehicleId}/images`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.token}`
-            },
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error('Image upload failed');
-        }
-
-        return await response.json();
-    }
-
-    // Subscription Methods
-    async getSubscriptionPlans() {
-        return await this.request('/api/subscriptions/plans');
-    }
-
-    async subscribe(tier) {
-        return await this.request('/api/subscriptions/subscribe', {
-            method: 'POST',
-            body: JSON.stringify({ subscription_tier: tier })
-        });
-    }
-
-    async getMySubscription() {
-        return await this.request('/api/subscriptions/my/subscription');
-    }
-
-    async getMyPayments() {
-        return await this.request('/api/subscriptions/my/payments');
-    }
-
-    // Admin Methods (require admin auth)
-    async getPendingVehicles(page = 1) {
-        return await this.request(`/api/admin/vehicles/pending?page=${page}`);
-    }
-
-    async approveVehicle(id) {
-        return await this.request(`/api/admin/vehicles/${id}/approve`, {
-            method: 'PUT'
-        });
-    }
-
-    async rejectVehicle(id) {
-        return await this.request(`/api/admin/vehicles/${id}/reject`, {
-            method: 'PUT'
-        });
-    }
-
-    async getAdminStats() {
-        return await this.request('/api/admin/stats');
-    }
-}
-
-// Create global API instance
-const api = new PikCarzAPI();
-
-// Export for modules
+// Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PikCarzAPI;
+  module.exports = { api, vehicleAPI, authAPI };
 }

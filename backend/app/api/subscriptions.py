@@ -3,8 +3,6 @@ Subscription and Payment API routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from decimal import Decimal
-from datetime import datetime, timedelta
 from typing import List
 from app.database import get_db
 from app.models.user import User
@@ -13,96 +11,126 @@ from app.models import SubscriptionTier, PaymentStatus
 from app.schemas.subscription import SubscriptionPlan, PaymentCreate, PaymentResponse, PayFastWebhook
 from app.core.deps import get_current_user
 from app.services.payfast import generate_payment_url, verify_payfast_signature
-from app.config import settings
+from datetime import datetime, timedelta
 
-router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions & Payments"])
+router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
 
-# Define subscription plans
+# Subscription Plans Configuration
 SUBSCRIPTION_PLANS = {
-    "free": SubscriptionPlan(
-        tier="free",
-        name="Free",
-        price=Decimal("0"),
-        duration_days=30,
-        max_listings=3,
-        features=["3 active listings", "Basic support", "30-day expiry"]
-    ),
-    "standard": SubscriptionPlan(
-        tier="standard",
-        name="Standard",
-        price=Decimal("299"),
-        duration_days=30,
-        max_listings=10,
-        features=["10 active listings", "Email support", "Featured badge", "No ads"]
-    ),
-    "premium": SubscriptionPlan(
-        tier="premium",
-        name="Premium",
-        price=Decimal("599"),
-        duration_days=30,
-        max_listings=25,
-        features=["25 active listings", "Priority support", "Top placement", "Analytics", "No ads"]
-    ),
-    "dealer_basic": SubscriptionPlan(
-        tier="dealer_basic",
-        name="Dealer Basic",
-        price=Decimal("1499"),
-        duration_days=30,
-        max_listings=50,
-        features=["50 active listings", "Dealer badge", "Priority support", "Analytics"]
-    ),
-    "dealer_pro": SubscriptionPlan(
-        tier="dealer_pro",
-        name="Dealer Pro",
-        price=Decimal("2999"),
-        duration_days=30,
-        max_listings=150,
-        features=["150 active listings", "Verified dealer badge", "Featured placement", "Advanced analytics", "API access"]
-    ),
-    "dealer_enterprise": SubscriptionPlan(
-        tier="dealer_enterprise",
-        name="Dealer Enterprise",
-        price=Decimal("5999"),
-        duration_days=30,
-        max_listings=9999,
-        features=["Unlimited listings", "Verified dealer badge", "Premium placement", "Dedicated support", "API access", "Custom integrations"]
-    )
+    "free": {
+        "name": "Free Tier",
+        "price": 0,
+        "duration_days": 30,
+        "max_listings": 1,
+        "features": [
+            "1 active listing",
+            "30-day duration",
+            "Basic visibility"
+        ]
+    },
+    "standard": {
+        "name": "Standard Plan",
+        "price": 199,  # R199/month
+        "duration_days": 30,
+        "max_listings": 5,
+        "features": [
+            "5 active listings",
+            "60-day duration",
+            "Featured placement",
+            "Priority support"
+        ]
+    },
+    "premium": {
+        "name": "Premium Plan",
+        "price": 499,  # R499/month
+        "duration_days": 30,
+        "max_listings": 15,
+        "features": [
+            "15 active listings",
+            "90-day duration",
+            "Top featured placement",
+            "Premium badge",
+            "Priority support",
+            "Analytics dashboard"
+        ]
+    },
+    "dealer_basic": {
+        "name": "Dealer Basic",
+        "price": 999,  # R999/month
+        "duration_days": 30,
+        "max_listings": 50,
+        "features": [
+            "50 active listings",
+            "Unlimited duration",
+            "Verified dealer badge",
+            "Bulk upload",
+            "Advanced analytics",
+            "Dedicated support"
+        ]
+    },
+    "dealer_pro": {
+        "name": "Dealer Pro",
+        "price": 1999,  # R1,999/month
+        "duration_days": 30,
+        "max_listings": 200,
+        "features": [
+            "200 active listings",
+            "Unlimited duration",
+            "Verified dealer badge",
+            "Bulk upload",
+            "Advanced analytics",
+            "Priority placement",
+            "Dedicated account manager"
+        ]
+    }
 }
 
 @router.get("/plans", response_model=List[SubscriptionPlan])
 def get_subscription_plans():
     """Get all available subscription plans"""
-    return list(SUBSCRIPTION_PLANS.values())
+    plans = []
+    for tier, details in SUBSCRIPTION_PLANS.items():
+        plans.append(SubscriptionPlan(
+            tier=tier,
+            name=details["name"],
+            price=details["price"],
+            duration_days=details["duration_days"],
+            max_listings=details["max_listings"],
+            features=details["features"]
+        ))
+    return plans
 
-@router.get("/plans/{tier}", response_model=SubscriptionPlan)
-def get_subscription_plan(tier: str):
-    """Get a specific subscription plan"""
-    if tier not in SUBSCRIPTION_PLANS:
-        raise HTTPException(status_code=404, detail="Subscription plan not found")
-    return SUBSCRIPTION_PLANS[tier]
-
-@router.post("/subscribe", status_code=status.HTTP_200_OK)
-def create_subscription(
-    payment_data: PaymentCreate,
+@router.post("/subscribe/{tier}")
+async def subscribe_to_plan(
+    tier: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Initiate subscription payment with PayFast"""
+    """Subscribe to a plan - generates PayFast payment URL"""
     
-    # Validate subscription tier
-    if payment_data.subscription_tier not in SUBSCRIPTION_PLANS:
+    if tier not in SUBSCRIPTION_PLANS:
         raise HTTPException(status_code=400, detail="Invalid subscription tier")
     
-    plan = SUBSCRIPTION_PLANS[payment_data.subscription_tier]
+    plan = SUBSCRIPTION_PLANS[tier]
+    
+    # Free tier - instant activation
+    if tier == "free":
+        current_user.subscription_tier = SubscriptionTier.FREE
+        current_user.subscription_expires = datetime.utcnow() + timedelta(days=30)
+        db.commit()
+        
+        return {
+            "message": "Free tier activated",
+            "tier": tier,
+            "expires": current_user.subscription_expires
+        }
     
     # Create payment record
     payment = Payment(
         user_id=current_user.id,
-        amount=plan.price,
-        subscription_tier=SubscriptionTier(payment_data.subscription_tier),
-        status=PaymentStatus.PENDING,
-        item_name=plan.name,
-        item_description=f"pikCarz {plan.name} Subscription - 30 days"
+        amount=plan["price"],
+        subscription_tier=SubscriptionTier(tier),
+        status=PaymentStatus.PENDING
     )
     
     db.add(payment)
@@ -111,28 +139,25 @@ def create_subscription(
     
     # Generate PayFast payment URL
     payment_url = generate_payment_url(
-        amount=float(plan.price),
-        item_name=plan.name,
-        item_description=payment.item_description,
-        email_address=current_user.email,
-        name_first=current_user.full_name.split()[0] if current_user.full_name else "User",
-        name_last=" ".join(current_user.full_name.split()[1:]) if len(current_user.full_name.split()) > 1 else "",
-        m_payment_id=str(payment.id),
-        user_id=current_user.id
+        payment_id=payment.id,
+        amount=plan["price"],
+        item_name=plan["name"],
+        user_email=current_user.email,
+        user_name=current_user.full_name
     )
     
     return {
-        "payment_id": payment.id,
         "payment_url": payment_url,
-        "amount": plan.price,
-        "subscription_tier": payment_data.subscription_tier
+        "payment_id": payment.id,
+        "amount": plan["price"],
+        "tier": tier
     }
 
-@router.post("/webhook/payfast", status_code=status.HTTP_200_OK)
+@router.post("/webhook/payfast")
 async def payfast_webhook(request: Request, db: Session = Depends(get_db)):
     """Handle PayFast ITN (Instant Transaction Notification) webhook"""
     
-    # Get form data from PayFast
+    # Get form data
     form_data = await request.form()
     data = dict(form_data)
     
@@ -141,60 +166,50 @@ async def payfast_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid signature")
     
     # Extract payment info
-    m_payment_id = data.get("m_payment_id")
-    pf_payment_id = data.get("pf_payment_id")
-    payment_status = data.get("payment_status")
+    payment_id = int(data.get('m_payment_id', 0))
+    payment_status = data.get('payment_status')
     
-    if not m_payment_id:
-        raise HTTPException(status_code=400, detail="Missing payment ID")
-    
-    # Find payment record
-    payment = db.query(Payment).filter(Payment.id == int(m_payment_id)).first()
+    # Get payment record
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
     
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
-    # Update payment record
-    payment.pf_payment_id = pf_payment_id
-    payment.raw_webhook_data = str(data)
-    
+    # Update payment status
     if payment_status == "COMPLETE":
         payment.status = PaymentStatus.COMPLETED
-        payment.completed_at = datetime.utcnow()
+        payment.payfast_payment_id = data.get('pf_payment_id')
         
         # Update user subscription
         user = db.query(User).filter(User.id == payment.user_id).first()
         if user:
             user.subscription_tier = payment.subscription_tier
             user.subscription_expires = datetime.utcnow() + timedelta(days=30)
-    
+        
     else:
         payment.status = PaymentStatus.FAILED
     
     db.commit()
     
-    return {"status": "success"}
+    return {"status": "ok"}
 
-@router.get("/my/subscription", response_model=dict)
-def get_my_subscription(
-    current_user: User = Depends(get_current_user)
-):
-    """Get current user's subscription details"""
-    
-    plan = SUBSCRIPTION_PLANS.get(current_user.subscription_tier, SUBSCRIPTION_PLANS["free"])
+@router.get("/my-subscription")
+def get_my_subscription(current_user: User = Depends(get_current_user)):
+    """Get current user's subscription info"""
     
     return {
-        "current_plan": plan,
-        "expires_at": current_user.subscription_expires,
-        "is_active": current_user.subscription_expires and current_user.subscription_expires > datetime.utcnow() if current_user.subscription_expires else False
+        "tier": current_user.subscription_tier.value,
+        "expires": current_user.subscription_expires,
+        "is_active": current_user.subscription_expires > datetime.utcnow() if current_user.subscription_expires else False
     }
 
-@router.get("/my/payments", response_model=List[PaymentResponse])
+@router.get("/payments", response_model=List[PaymentResponse])
 def get_my_payments(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all payments for current user"""
+    """Get payment history for current user"""
     
     payments = db.query(Payment).filter(Payment.user_id == current_user.id).order_by(Payment.created_at.desc()).all()
-    return payments
+    
+    return [PaymentResponse.model_validate(p) for p in payments]

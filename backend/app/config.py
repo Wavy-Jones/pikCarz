@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     
     # CORS
     FRONTEND_URL: str = "https://wavy-jones.github.io/pikCarz"
+    BACKEND_URL: str = "https://pikcarz.vercel.app"
     
     # Cloudinary
     CLOUDINARY_CLOUD_NAME: str
