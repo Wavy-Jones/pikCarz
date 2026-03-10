@@ -15,6 +15,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     province: ''
   };
   
+  // Read URL parameters on page load
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlType = urlParams.get('type');
+  
+  if (urlType) {
+    // Map URL type to API category
+    const typeMap = {
+      'all': '',
+      'new-cars': 'new_car',
+      'used-cars': 'used_car',
+      'motorbikes': 'motorcycle',
+      'trucks': 'truck',
+      'other': 'other'
+    };
+    currentFilters.category = typeMap[urlType] || '';
+    
+    // Highlight the correct category chip
+    document.querySelectorAll('.cat-chip').forEach(chip => {
+      const chipText = chip.textContent.trim().toLowerCase();
+      const chipMap = {
+        'all vehicles': 'all',
+        'new cars': 'new-cars',
+        'used cars': 'used-cars',
+        'motorbikes': 'motorbikes',
+        'trucks & bakkies': 'trucks',
+        'other vehicles': 'other'
+      };
+      
+      if (chipMap[chipText] === urlType) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+  }
+  
   // Load vehicles on page load
   await loadVehicles();
   
