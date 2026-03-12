@@ -3,12 +3,15 @@ Authentication API routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
+from datetime import datetime, timedelta
 from app.database import get_db
 from app.models.user import User
 from app.models import UserRole
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.deps import get_current_user
+import secrets
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -77,9 +80,12 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 @router.post("/request-password-reset")
 def request_password_reset(request_data: dict, db: Session = Depends(get_db)):
-    """Request password reset - generates reset token"""
+    """Request password reset - generates reset token and stores in database"""
     
     email = request_data.get("email")
+    
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
     
     # Find user
     user = db.query(User).filter(User.email == email).first()
@@ -89,22 +95,56 @@ def request_password_reset(request_data: dict, db: Session = Depends(get_db)):
         return {"message": "If the email exists, reset instructions have been sent"}
     
     # Generate reset token (valid for 1 hour)
-    import secrets
     reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=1)
     
-    # In production, you would:
-    # 1. Store reset_token in database with expiry
-    # 2. Send email with reset link containing token
-    # 3. User clicks link with token to reset password
-    
-    # For now, just return success
-    # TODO: Integrate with email service (SendGrid, Mailgun, etc.)
-    
-    print(f"Password reset requested for: {email}")
-    print(f"Reset token (for testing): {reset_token}")
-    print(f"Reset link: https://pikcarz.co.za/reset-password.html?token={reset_token}")
-    
-    return {"message": "If the email exists, reset instructions have been sent"}
+    # Store token in database
+    try:
+        # Invalidate any existing tokens for this user
+        db.execute(
+            text("UPDATE password_reset_tokens SET used = TRUE WHERE user_id = :user_id AND used = FALSE"),
+            {"user_id": user.id}
+        )
+        
+        # Create new reset token
+        db.execute(
+            text("""
+                INSERT INTO password_reset_tokens (user_id, token, expires_at, used)
+                VALUES (:user_id, :token, :expires_at, FALSE)
+            """),
+            {
+                "user_id": user.id,
+                "token": reset_token,
+                "expires_at": expires_at
+            }
+        )
+        
+        db.commit()
+        
+        # In production, send email here
+        # For now, print to console (visible in Vercel logs)
+        reset_link = f"https://pikcarz.co.za/reset-password.html?token={reset_token}"
+        print(f"\n{'='*60}")
+        print(f"PASSWORD RESET REQUESTED")
+        print(f"{'='*60}")
+        print(f"Email: {email}")
+        print(f"User: {user.full_name}")
+        print(f"Reset Link: {reset_link}")
+        print(f"Token: {reset_token}")
+        print(f"Expires: {expires_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print(f"{'='*60}\n")
+        
+        return {
+            "message": "If the email exists, reset instructions have been sent",
+            # In development, return the token for testing
+            # Remove this in production!
+            "dev_reset_link": reset_link if True else None  # Set to False in production
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating reset token: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create reset token")
 
 @router.post("/reset-password")
 def reset_password(request_data: dict, db: Session = Depends(get_db)):
@@ -113,16 +153,67 @@ def reset_password(request_data: dict, db: Session = Depends(get_db)):
     token = request_data.get("token")
     new_password = request_data.get("new_password")
     
-    # In production, you would:
-    # 1. Verify token exists and hasn't expired
-    # 2. Find user associated with token
-    # 3. Update password
-    # 4. Invalidate token
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="Token and new password are required")
     
-    # For now, this is a placeholder
-    # TODO: Implement token validation and password update
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
     
-    raise HTTPException(
-        status_code=501,
-        detail="Password reset feature is under development. Please contact admin to reset your password."
-    )
+    try:
+        # Find valid token
+        result = db.execute(
+            text("""
+                SELECT user_id, expires_at, used 
+                FROM password_reset_tokens 
+                WHERE token = :token
+            """),
+            {"token": token}
+        ).fetchone()
+        
+        if not result:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+        user_id, expires_at, used = result
+        
+        # Check if token is used
+        if used:
+            raise HTTPException(status_code=400, detail="This reset link has already been used")
+        
+        # Check if token is expired
+        if datetime.utcnow() > expires_at:
+            raise HTTPException(status_code=400, detail="This reset link has expired")
+        
+        # Get user
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+        
+        # Update password
+        user.hashed_password = get_password_hash(new_password)
+        
+        # Mark token as used
+        db.execute(
+            text("UPDATE password_reset_tokens SET used = TRUE WHERE token = :token"),
+            {"token": token}
+        )
+        
+        db.commit()
+        
+        print(f"\n{'='*60}")
+        print(f"PASSWORD RESET SUCCESSFUL")
+        print(f"{'='*60}")
+        print(f"Email: {user.email}")
+        print(f"User: {user.full_name}")
+        print(f"{'='*60}\n")
+        
+        return {
+            "message": "Password reset successful! You can now sign in with your new password.",
+            "email": user.email
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error resetting password: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to reset password")
