@@ -74,3 +74,55 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user info"""
     return current_user
+
+@router.post("/request-password-reset")
+def request_password_reset(request_data: dict, db: Session = Depends(get_db)):
+    """Request password reset - generates reset token"""
+    
+    email = request_data.get("email")
+    
+    # Find user
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Don't reveal if email exists or not (security best practice)
+        return {"message": "If the email exists, reset instructions have been sent"}
+    
+    # Generate reset token (valid for 1 hour)
+    import secrets
+    reset_token = secrets.token_urlsafe(32)
+    
+    # In production, you would:
+    # 1. Store reset_token in database with expiry
+    # 2. Send email with reset link containing token
+    # 3. User clicks link with token to reset password
+    
+    # For now, just return success
+    # TODO: Integrate with email service (SendGrid, Mailgun, etc.)
+    
+    print(f"Password reset requested for: {email}")
+    print(f"Reset token (for testing): {reset_token}")
+    print(f"Reset link: https://pikcarz.co.za/reset-password.html?token={reset_token}")
+    
+    return {"message": "If the email exists, reset instructions have been sent"}
+
+@router.post("/reset-password")
+def reset_password(request_data: dict, db: Session = Depends(get_db)):
+    """Reset password using token"""
+    
+    token = request_data.get("token")
+    new_password = request_data.get("new_password")
+    
+    # In production, you would:
+    # 1. Verify token exists and hasn't expired
+    # 2. Find user associated with token
+    # 3. Update password
+    # 4. Invalidate token
+    
+    # For now, this is a placeholder
+    # TODO: Implement token validation and password update
+    
+    raise HTTPException(
+        status_code=501,
+        detail="Password reset feature is under development. Please contact admin to reset your password."
+    )
