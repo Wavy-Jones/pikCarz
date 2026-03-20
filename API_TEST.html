@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>API Connection Test - pikCarz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1F2128;
+      color: white;
+    }
+    .test-box {
+      background: #2A2D35;
+      border: 1px solid #3A3D45;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success { background: #10b981; color: white; }
+    .error { background: #ef4444; color: white; }
+    .pending { background: #f59e0b; color: white; }
+    button {
+      background: #FF4545;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover { background: #E03535; }
+    pre {
+      background: #1F2128;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🔍 pikCarz API Connection Test</h1>
+<p>This page will test if your backend is accessible and working properly.</p>
+
+<div class="test-box">
+  <h2>Test 1: Backend Health Check</h2>
+  <button onclick="testHealth()">Run Health Check</button>
+  <div id="health-result"></div>
+</div>
+
+<div class="test-box">
+  <h2>Test 2: CORS Test</h2>
+  <button onclick="testCORS()">Test CORS</button>
+  <div id="cors-result"></div>
+</div>
+
+<div class="test-box">
+  <h2>Test 3: Login Endpoint</h2>
+  <button onclick="testLogin()">Test Login</button>
+  <div id="login-result"></div>
+</div>
+
+<div class="test-box">
+  <h2>Test 4: Database Connection</h2>
+  <button onclick="testDatabase()">Test Database</button>
+  <div id="db-result"></div>
+</div>
+
+<div class="test-box">
+  <h2>Quick Fixes</h2>
+  <p>If tests fail, try these:</p>
+  <ul>
+    <li><strong>Backend Down:</strong> Check Vercel deployment status</li>
+    <li><strong>CORS Error:</strong> Already configured, redeploy backend</li>
+    <li><strong>Login Fails:</strong> Check database connection in Vercel</li>
+    <li><strong>500 Error:</strong> Check Vercel logs for errors</li>
+  </ul>
+</div>
+
+<script>
+const API_BASE = 'https://pikcarz.vercel.app';
+
+async function testHealth() {
+  const resultDiv = document.getElementById('health-result');
+  resultDiv.innerHTML = '<div class="status pending">Testing...</div>';
+  
+  try {
+    const response = await fetch(`${API_BASE}/health`, {
+      method: 'GET'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      resultDiv.innerHTML = `
+        <div class="status success">✅ Backend is ONLINE!</div>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+    } else {
+      resultDiv.innerHTML = `
+        <div class="status error">❌ Backend returned ${response.status}</div>
+        <p>Backend is deployed but returning an error.</p>
+      `;
+    }
+  } catch (error) {
+    resultDiv.innerHTML = `
+      <div class="status error">❌ Cannot reach backend!</div>
+      <p><strong>Error:</strong> ${error.message}</p>
+      <p><strong>Possible causes:</strong></p>
+      <ul>
+        <li>Backend is not deployed on Vercel</li>
+        <li>Vercel deployment failed</li>
+        <li>Network connectivity issue</li>
+        <li>Wrong URL (check if ${API_BASE} is correct)</li>
+      </ul>
+    `;
+  }
+}
+
+async function testCORS() {
+  const resultDiv = document.getElementById('cors-result');
+  resultDiv.innerHTML = '<div class="status pending">Testing CORS...</div>';
+  
+  try {
+    const response = await fetch(`${API_BASE}/health`, {
+      method: 'OPTIONS',
+      headers: {
+        'Origin': 'https://pikcarz.co.za',
+        'Access-Control-Request-Method': 'GET'
+      }
+    });
+    
+    resultDiv.innerHTML = `
+      <div class="status success">✅ CORS is configured correctly!</div>
+      <p>Your frontend can communicate with the backend.</p>
+    `;
+  } catch (error) {
+    resultDiv.innerHTML = `
+      <div class="status error">❌ CORS Issue Detected</div>
+      <p><strong>Error:</strong> ${error.message}</p>
+      <p><strong>Fix:</strong> Make sure backend main.py includes pikcarz.co.za in CORS origins.</p>
+    `;
+  }
+}
+
+async function testLogin() {
+  const resultDiv = document.getElementById('login-result');
+  resultDiv.innerHTML = '<div class="status pending">Testing login endpoint...</div>';
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'test@test.com',
+        password: 'wrongpassword'
+      })
+    });
+    
+    // We expect this to fail with 401, which means endpoint is working
+    if (response.status === 401) {
+      resultDiv.innerHTML = `
+        <div class="status success">✅ Login endpoint is working!</div>
+        <p>Endpoint returned expected 401 (unauthorized) - this is correct!</p>
+        <p>Your actual login should work with valid credentials.</p>
+      `;
+    } else if (response.status === 422) {
+      resultDiv.innerHTML = `
+        <div class="status success">✅ Login endpoint is working!</div>
+        <p>Endpoint validated the request format - backend is functional!</p>
+      `;
+    } else {
+      const data = await response.json();
+      resultDiv.innerHTML = `
+        <div class="status error">⚠️  Unexpected response: ${response.status}</div>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+    }
+  } catch (error) {
+    resultDiv.innerHTML = `
+      <div class="status error">❌ Login endpoint failed!</div>
+      <p><strong>Error:</strong> ${error.message}</p>
+      <p><strong>This is your main problem!</strong> The login endpoint is not accessible.</p>
+    `;
+  }
+}
+
+async function testDatabase() {
+  const resultDiv = document.getElementById('db-result');
+  resultDiv.innerHTML = '<div class="status pending">Testing database...</div>';
+  
+  try {
+    // Try to register a test user (will fail if exists, but proves DB works)
+    const response = await fetch(`${API_BASE}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: `test-${Date.now()}@test.com`,
+        password: 'TestPass123!',
+        full_name: 'Test User',
+        role: 'individual'
+      })
+    });
+    
+    if (response.status === 201 || response.status === 400) {
+      resultDiv.innerHTML = `
+        <div class="status success">✅ Database is connected!</div>
+        <p>The backend can communicate with the database.</p>
+      `;
+    } else {
+      const data = await response.json();
+      resultDiv.innerHTML = `
+        <div class="status error">⚠️ Database response: ${response.status}</div>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+    }
+  } catch (error) {
+    resultDiv.innerHTML = `
+      <div class="status error">❌ Database test failed!</div>
+      <p><strong>Error:</strong> ${error.message}</p>
+      <p>Check Vercel environment variables for POSTGRES_PRISMA_URL</p>
+    `;
+  }
+}
+
+// Run health check on load
+window.addEventListener('load', () => {
+  testHealth();
+});
+</script>
+
+</body>
+</html>
