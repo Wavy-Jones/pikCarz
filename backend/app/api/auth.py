@@ -11,6 +11,7 @@ from app.models import UserRole
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.deps import get_current_user
+from app.services.email import send_password_reset_email, send_welcome_email
 import secrets
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -38,6 +39,15 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Send welcome email (non-blocking, don't fail registration if email fails)
+    try:
+        send_welcome_email(
+            to_email=new_user.email,
+            user_name=new_user.full_name
+        )
+    except Exception as e:
+        print(f"Failed to send welcome email: {str(e)}")
     
     # Create token
     access_token = create_access_token(data={"sub": new_user.id})
@@ -121,24 +131,19 @@ def request_password_reset(request_data: dict, db: Session = Depends(get_db)):
         
         db.commit()
         
-        # In production, send email here
-        # For now, print to console (visible in Vercel logs)
+        # Generate reset link
         reset_link = f"https://pikcarz.co.za/reset-password.html?token={reset_token}"
-        print(f"\n{'='*60}")
-        print(f"PASSWORD RESET REQUESTED")
-        print(f"{'='*60}")
-        print(f"Email: {email}")
-        print(f"User: {user.full_name}")
-        print(f"Reset Link: {reset_link}")
-        print(f"Token: {reset_token}")
-        print(f"Expires: {expires_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-        print(f"{'='*60}\n")
         
+        # Send password reset email
+        email_sent = send_password_reset_email(
+            to_email=user.email,
+            reset_link=reset_link,
+            user_name=user.full_name
+        )
+        
+        # Return response (don't reveal if email exists)
         return {
-            "message": "If the email exists, reset instructions have been sent",
-            # In development, return the token for testing
-            # Remove this in production!
-            "dev_reset_link": reset_link if True else None  # Set to False in production
+            "message": "If the email exists, reset instructions have been sent"
         }
         
     except Exception as e:
