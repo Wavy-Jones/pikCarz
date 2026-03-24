@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LOGIN DEBUG - FIND THE EXACT ISSUE</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+    .test { margin: 20px 0; padding: 15px; border: 1px solid #0f0; }
+    .success { color: #0f0; }
+    .error { color: #f00; }
+    .warning { color: #ff0; }
+    button { background: #0f0; color: #000; padding: 10px 20px; border: none; cursor: pointer; margin: 5px; }
+    input { padding: 8px; margin: 5px; background: #222; color: #0f0; border: 1px solid #0f0; }
+    pre { background: #111; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+<h1>🔍 LOGIN ENDPOINT DEBUGGER</h1>
+
+<div class="test">
+  <h2>Test with YOUR credentials:</h2>
+  <input type="email" id="test-email" placeholder="Your email" value="dj.mhangwana@gmail.com" style="width: 250px;">
+  <input type="password" id="test-password" placeholder="Your password" style="width: 250px;">
+  <button onclick="testRealLogin()">TEST MY LOGIN</button>
+  <pre id="login-result"></pre>
+</div>
+
+<div class="test">
+  <h2>Test Each Step:</h2>
+  <button onclick="step1()">1. Check Endpoint Exists</button>
+  <button onclick="step2()">2. Test with Wrong Password</button>
+  <button onclick="step3()">3. Test Response Format</button>
+  <button onclick="step4()">4. Check Database Connection</button>
+  <pre id="step-result"></pre>
+</div>
+
+<div class="test">
+  <h2>Check Admin Accounts:</h2>
+  <button onclick="checkAdmins()">Check All Admin Accounts</button>
+  <pre id="admin-result"></pre>
+</div>
+
+<script>
+const API = 'https://pikcarz.vercel.app';
+
+async function testRealLogin() {
+  const email = document.getElementById('test-email').value;
+  const password = document.getElementById('test-password').value;
+  const r = document.getElementById('login-result');
+  
+  r.innerHTML = `Testing login for: ${email}\n\n`;
+  
+  try {
+    const response = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    r.innerHTML += `Response Status: ${response.status}\n\n`;
+    
+    const data = await response.json();
+    r.innerHTML += `Response Data:\n${JSON.stringify(data, null, 2)}\n\n`;
+    
+    if (response.ok) {
+      r.innerHTML += `<span class="success">✅ LOGIN SUCCESSFUL!</span>\n`;
+      r.innerHTML += `Token: ${data.access_token.substring(0, 20)}...\n`;
+      r.innerHTML += `User: ${data.user.full_name}\n`;
+      r.innerHTML += `Role: ${data.user.role}\n`;
+      r.innerHTML += `\n<span class="success">YOUR LOGIN WORKS! The issue is elsewhere!</span>\n`;
+    } else {
+      r.innerHTML += `<span class="error">❌ LOGIN FAILED</span>\n`;
+      r.innerHTML += `Error: ${data.detail}\n`;
+    }
+  } catch (error) {
+    r.innerHTML += `<span class="error">❌ FETCH FAILED</span>\n`;
+    r.innerHTML += `Error: ${error.message}\n`;
+    r.innerHTML += `\nThis means the endpoint is not reachable!\n`;
+  }
+}
+
+async function step1() {
+  const r = document.getElementById('step-result');
+  r.innerHTML = 'Step 1: Checking if login endpoint exists...\n\n';
+  
+  try {
+    const response = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test', password: 'test' })
+    });
+    
+    r.innerHTML += `Status: ${response.status}\n`;
+    
+    if (response.status === 422) {
+      r.innerHTML += `<span class="success">✅ Endpoint exists! (422 = validation error, which is expected)</span>\n`;
+    } else if (response.status === 401) {
+      r.innerHTML += `<span class="success">✅ Endpoint exists! (401 = unauthorized, which is expected)</span>\n`;
+    } else {
+      r.innerHTML += `<span class="warning">⚠️ Unexpected status, but endpoint is responding</span>\n`;
+    }
+  } catch (error) {
+    r.innerHTML += `<span class="error">❌ Endpoint not reachable: ${error.message}</span>\n`;
+  }
+}
+
+async function step2() {
+  const r = document.getElementById('step-result');
+  r.innerHTML = 'Step 2: Testing with intentionally wrong credentials...\n\n';
+  
+  try {
+    const response = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email: 'nonexistent@example.com', 
+        password: 'wrongpassword' 
+      })
+    });
+    
+    const data = await response.json();
+    r.innerHTML += `Status: ${response.status}\n`;
+    r.innerHTML += `Response: ${JSON.stringify(data, null, 2)}\n\n`;
+    
+    if (response.status === 401) {
+      r.innerHTML += `<span class="success">✅ Endpoint is working correctly! Returns 401 for wrong credentials</span>\n`;
+    }
+  } catch (error) {
+    r.innerHTML += `<span class="error">❌ Error: ${error.message}</span>\n`;
+  }
+}
+
+async function step3() {
+  const r = document.getElementById('step-result');
+  r.innerHTML = 'Step 3: Checking API documentation...\n\n';
+  
+  try {
+    const response = await fetch(`${API}/docs`);
+    if (response.ok) {
+      r.innerHTML += `<span class="success">✅ API docs accessible at: ${API}/docs</span>\n`;
+      r.innerHTML += `\nGo there in your browser to test the login endpoint directly!\n`;
+    }
+  } catch (error) {
+    r.innerHTML += `<span class="error">❌ Cannot access docs</span>\n`;
+  }
+}
+
+async function step4() {
+  const r = document.getElementById('step-result');
+  r.innerHTML = 'Step 4: Testing database connection via registration...\n\n';
+  
+  try {
+    const testEmail = `test${Date.now()}@test.com`;
+    const response = await fetch(`${API}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testEmail,
+        password: 'TestPass123!',
+        full_name: 'Test User',
+        role: 'individual'
+      })
+    });
+    
+    const data = await response.json();
+    r.innerHTML += `Status: ${response.status}\n`;
+    r.innerHTML += `Response: ${JSON.stringify(data, null, 2)}\n\n`;
+    
+    if (response.status === 201) {
+      r.innerHTML += `<span class="success">✅ Database is working! User created successfully</span>\n`;
+    }
+  } catch (error) {
+    r.innerHTML += `<span class="error">❌ Database error: ${error.message}</span>\n`;
+  }
+}
+
+async function checkAdmins() {
+  const r = document.getElementById('admin-result');
+  r.innerHTML = 'Checking if admin accounts can login...\n\n';
+  
+  const admins = [
+    { email: 'gershon@pikcarz.co.za', password: 'Gershon2026!Secure' },
+    { email: 'davy@pikcarz.co.za', password: 'DavyJones2026!Secure' },
+    { email: 'admin3@pikcarz.co.za', password: 'Admin32026!Secure' },
+    { email: 'dj.mhangwana@gmail.com', password: 'DavyJones2026!Secure' }
+  ];
+  
+  for (const admin of admins) {
+    try {
+      const response = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(admin)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        r.innerHTML += `<span class="success">✅ ${admin.email} - LOGIN WORKS! Role: ${data.user.role}</span>\n`;
+      } else {
+        const data = await response.json();
+        r.innerHTML += `<span class="error">❌ ${admin.email} - FAILED: ${data.detail}</span>\n`;
+      }
+    } catch (error) {
+      r.innerHTML += `<span class="error">❌ ${admin.email} - ERROR: ${error.message}</span>\n`;
+    }
+  }
+}
+
+// Auto-run on load
+window.onload = () => {
+  checkAdmins();
+};
+</script>
+</body>
+</html>

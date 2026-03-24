@@ -33,20 +33,9 @@
     
     .signin-container h1 {
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 32px;
       color: var(--white);
       font-size: 1.8rem;
-    }
-    
-    .error-message {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid #ef4444;
-      color: #ef4444;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-      display: none;
     }
     
     .form-group {
@@ -77,6 +66,17 @@
       border-color: var(--accent);
     }
     
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    
     .signin-btn {
       width: 100%;
       padding: 16px;
@@ -101,15 +101,9 @@
       cursor: not-allowed;
     }
     
-    .divider {
-      text-align: center;
-      color: var(--border);
-      margin: 24px 0;
-      font-size: 0.9rem;
-    }
-    
     .signin-footer {
       text-align: center;
+      margin-top: 24px;
       color: var(--muted);
       font-size: 0.9rem;
     }
@@ -119,8 +113,11 @@
       text-decoration: none;
     }
     
-    .signin-footer a:hover {
-      text-decoration: underline;
+    .divider {
+      text-align: center;
+      margin: 24px 0;
+      color: var(--muted);
+      font-size: 0.85rem;
     }
   </style>
 </head>
@@ -181,27 +178,6 @@
 <script>
   const API_BASE = 'https://pikcarz.vercel.app';
   
-  // Add timeout to fetch to catch hanging requests
-  async function fetchWithTimeout(url, options, timeout = 10000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timed out - backend may be slow or unavailable');
-      }
-      throw error;
-    }
-  }
-  
   document.getElementById('signin-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -218,31 +194,19 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Signing in...';
     
-    console.log('Attempting login for:', email);
-    console.log('API endpoint:', `${API_BASE}/api/auth/login`);
-    
     try {
-      const response = await fetchWithTimeout(`${API_BASE}/api/auth/login`, {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password }),
-        mode: 'cors',
-        credentials: 'omit'
-      }, 15000); // 15 second timeout
-      
-      console.log('Response status:', response.status);
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
       
       if (!response.ok) {
         const error = await response.json();
-        console.error('Login error response:', error);
         throw new Error(error.detail || 'Invalid credentials');
       }
       
       const data = await response.json();
-      console.log('Login successful:', data.user.email);
       
       // Store token and user data
       localStorage.setItem('auth_token', data.access_token);
@@ -250,37 +214,20 @@
       
       // Redirect based on role
       if (data.user.role === 'admin') {
-        console.log('Redirecting to admin dashboard');
+        // Admin users go to admin dashboard
         window.location.href = 'admin-dashboard.html';
       } else {
-        console.log('Redirecting to user dashboard');
+        // Regular users go to user dashboard
         window.location.href = 'dashboard.html';
       }
       
     } catch (error) {
-      console.error('Login error:', error);
-      
-      let errorMessage = error.message;
-      
-      // Provide more helpful error messages
-      if (error.message.includes('Failed to fetch')) {
-        errorMessage = 'Unable to connect to server. Please check your internet connection and try again.';
-      } else if (error.message.includes('timed out')) {
-        errorMessage = 'Connection timed out. The server is taking too long to respond. Please try again.';
-      } else if (error.message.includes('NetworkError')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-      
-      errorDiv.textContent = errorMessage;
+      errorDiv.textContent = error.message;
       errorDiv.style.display = 'block';
       submitBtn.disabled = false;
       submitBtn.textContent = 'Sign In';
     }
   });
-  
-  // Log when page loads
-  console.log('Sign in page loaded');
-  console.log('API Base URL:', API_BASE);
 </script>
 
 </body>
