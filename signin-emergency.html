@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — pikCarz (Emergency Backup)</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .signin-container {
+      max-width: 480px;
+      margin: 100px auto;
+      padding: 48px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    
+    .signin-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    
+    .signin-logo img {
+      height: 48px;
+      width: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      object-fit: cover;
+    }
+    
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--white);
+      font-size: 1rem;
+    }
+    
+    .signin-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="signin-container">
+  <a href="index.html" class="signin-logo">
+    <img src="Logo.png" alt="pikCarz" />
+    <span class="logo-sub">Powered by Cubeas</span>
+  </a>
+  
+  <h1 style="text-align: center; color: var(--white); margin-bottom: 16px;">Welcome Back</h1>
+  
+  <div id="error-message" class="error-message"></div>
+  
+  <form id="signin-form">
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input 
+        type="email" 
+        id="email" 
+        name="email" 
+        required 
+        placeholder="your.email@example.com"
+      />
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        type="password" 
+        id="password" 
+        name="password" 
+        required 
+        placeholder="Enter your password"
+      />
+    </div>
+    
+    <button type="submit" class="signin-btn" id="signin-btn">
+      Sign In
+    </button>
+  </form>
+  
+  <div style="text-align: center; margin-top: 24px;">
+    <p style="color: var(--muted);">Don't have an account? <a href="register.html" style="color: var(--accent);">Create one</a></p>
+    <p style="margin-top: 16px;"><a href="index.html" style="color: var(--accent);">← Back to Home</a></p>
+  </div>
+</div>
+
+<script>
+// EMERGENCY BACKUP LOGIN - WORKS WITH OR WITHOUT BACKEND
+const API_BASE = 'https://pikcarz.vercel.app';
+
+// Hardcoded admin credentials for emergency demo
+const EMERGENCY_ADMINS = [
+  { email: 'gershon@pikcarz.co.za', password: 'Gershon2026!Secure', name: 'Gershon Mbhalati', role: 'admin' },
+  { email: 'davy@pikcarz.co.za', password: 'DavyJones2026!Secure', name: 'Davy-Jones Mhangwana', role: 'admin' },
+  { email: 'admin3@pikcarz.co.za', password: 'Admin32026!Secure', name: 'Admin Support', role: 'admin' },
+  { email: 'dj.mhangwana@gmail.com', password: 'DavyJones2026!Secure', name: 'Davy-Jones', role: 'admin' }
+];
+
+document.getElementById('signin-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const errorDiv = document.getElementById('error-message');
+  const submitBtn = document.getElementById('signin-btn');
+  
+  errorDiv.style.display = 'none';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in...';
+  
+  try {
+    // FIRST: Try real API
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('auth_token', data.access_token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        
+        // Redirect based on role
+        if (data.user.role === 'admin') {
+          window.location.href = 'admin-dashboard.html';
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+        return;
+      }
+    } catch (apiError) {
+      console.log('API not available, using emergency login');
+    }
+    
+    // FALLBACK: Emergency hardcoded login
+    const admin = EMERGENCY_ADMINS.find(a => a.email === email && a.password === password);
+    
+    if (admin) {
+      // Create fake token and user data
+      const fakeToken = 'emergency_' + btoa(email + ':' + Date.now());
+      const fakeUser = {
+        id: 999,
+        email: admin.email,
+        full_name: admin.name,
+        role: admin.role,
+        subscription_tier: 'premium',
+        is_active: true
+      };
+      
+      localStorage.setItem('auth_token', fakeToken);
+      localStorage.setItem('user_data', JSON.stringify(fakeUser));
+      
+      // Show success and redirect
+      alert('⚠️ EMERGENCY MODE: Logged in successfully (backend offline)');
+      window.location.href = 'admin-dashboard.html';
+    } else {
+      throw new Error('Invalid email or password');
+    }
+    
+  } catch (error) {
+    errorDiv.textContent = error.message;
+    errorDiv.style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
+});
+</script>
+
+</body>
+</html>

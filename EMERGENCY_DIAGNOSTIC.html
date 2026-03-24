@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>EMERGENCY API DIAGNOSTIC</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+    .test { margin: 20px 0; padding: 15px; border: 1px solid #0f0; }
+    .success { color: #0f0; }
+    .error { color: #f00; }
+    button { background: #0f0; color: #000; padding: 10px 20px; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+<h1>🚨 EMERGENCY API DIAGNOSTIC</h1>
+
+<div class="test">
+  <h2>Test 1: Backend Health</h2>
+  <button onclick="test1()">RUN TEST 1</button>
+  <pre id="result1"></pre>
+</div>
+
+<div class="test">
+  <h2>Test 2: Login Endpoint</h2>
+  <button onclick="test2()">RUN TEST 2</button>
+  <pre id="result2"></pre>
+</div>
+
+<div class="test">
+  <h2>Test 3: Password Reset Endpoint</h2>
+  <button onclick="test3()">RUN TEST 3</button>
+  <pre id="result3"></pre>
+</div>
+
+<div class="test">
+  <h2>Test 4: Full Error Details</h2>
+  <button onclick="test4()">RUN TEST 4</button>
+  <pre id="result4"></pre>
+</div>
+
+<script>
+const API = 'https://pikcarz.vercel.app';
+
+async function test1() {
+  const r = document.getElementById('result1');
+  r.innerHTML = 'Testing...';
+  try {
+    const response = await fetch(`${API}/health`);
+    const data = await response.json();
+    r.innerHTML = `<span class="success">✅ SUCCESS\nStatus: ${response.status}\nData: ${JSON.stringify(data, null, 2)}</span>`;
+  } catch (e) {
+    r.innerHTML = `<span class="error">❌ FAILED\nError: ${e.message}\nStack: ${e.stack}</span>`;
+  }
+}
+
+async function test2() {
+  const r = document.getElementById('result2');
+  r.innerHTML = 'Testing...';
+  try {
+    const response = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@test.com', password: 'test' })
+    });
+    const data = await response.json();
+    r.innerHTML = `<span class="success">✅ ENDPOINT RESPONDING\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}</span>`;
+  } catch (e) {
+    r.innerHTML = `<span class="error">❌ FAILED TO FETCH\nError: ${e.message}\nThis means the endpoint is not accessible at all!\n\nPOSSIBLE CAUSES:\n1. Backend not deployed\n2. CORS issue\n3. Network error\n4. Vercel function error</span>`;
+  }
+}
+
+async function test3() {
+  const r = document.getElementById('result3');
+  r.innerHTML = 'Testing...';
+  try {
+    const response = await fetch(`${API}/api/auth/request-password-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@test.com' })
+    });
+    const data = await response.json();
+    r.innerHTML = `<span class="success">✅ ENDPOINT RESPONDING\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}</span>`;
+  } catch (e) {
+    r.innerHTML = `<span class="error">❌ FAILED TO FETCH\nError: ${e.message}</span>`;
+  }
+}
+
+async function test4() {
+  const r = document.getElementById('result4');
+  r.innerHTML = 'Running comprehensive check...\n\n';
+  
+  // Test 1: Check if backend is reachable
+  try {
+    const healthResponse = await fetch(`${API}/health`, { mode: 'cors' });
+    r.innerHTML += `✅ Backend is reachable\n`;
+    r.innerHTML += `   Status: ${healthResponse.status}\n\n`;
+  } catch (e) {
+    r.innerHTML += `❌ Backend NOT reachable: ${e.message}\n\n`;
+  }
+  
+  // Test 2: Check CORS
+  try {
+    const corsResponse = await fetch(`${API}/api/auth/login`, {
+      method: 'OPTIONS',
+      headers: { 'Origin': 'https://pikcarz.co.za' }
+    });
+    r.innerHTML += `✅ CORS preflight passed\n\n`;
+  } catch (e) {
+    r.innerHTML += `❌ CORS issue: ${e.message}\n\n`;
+  }
+  
+  // Test 3: Check if endpoints exist
+  try {
+    const docsResponse = await fetch(`${API}/docs`);
+    r.innerHTML += `✅ API docs accessible\n`;
+    r.innerHTML += `   Check: ${API}/docs\n\n`;
+  } catch (e) {
+    r.innerHTML += `❌ API docs not accessible\n\n`;
+  }
+  
+  r.innerHTML += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  r.innerHTML += `IMMEDIATE ACTIONS:\n`;
+  r.innerHTML += `1. Check Vercel dashboard for deployment status\n`;
+  r.innerHTML += `2. Check Vercel function logs for errors\n`;
+  r.innerHTML += `3. Verify environment variables are set\n`;
+  r.innerHTML += `4. Try redeploying backend\n`;
+}
+
+// Auto-run all tests on load
+window.onload = () => {
+  test1();
+  setTimeout(test2, 1000);
+  setTimeout(test3, 2000);
+  setTimeout(test4, 3000);
+};
+</script>
+</body>
+</html>
