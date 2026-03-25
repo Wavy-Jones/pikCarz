@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     
     # CORS
-    FRONTEND_URL: str = "https://wavy-jones.github.io/pikCarz"
+    FRONTEND_URL: str = "https://pikcarz.co.za"
     BACKEND_URL: str = "https://pikcarz.vercel.app"
     
     # Cloudinary
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     PAYFAST_MERCHANT_ID: str
     PAYFAST_MERCHANT_KEY: str
     PAYFAST_PASSPHRASE: str
-    PAYFAST_MODE: str = "sandbox"  # or 'live'
+    PAYFAST_MODE: str = "live"  # Production mode - site is going live!
     
     # Admin
     ADMIN_EMAIL: str = "admin@pikcarz.co.za"
