@@ -8,14 +8,14 @@ let currentSubscription = null;
 // Initialize dashboard
 async function initDashboard() {
     // Check authentication
-    if (!api.isAuthenticated()) {
-        window.location.href = 'index.html';
+    if (!authAPI.isAuthenticated()) {
+        window.location.href = 'signin.html';
         return;
     }
 
     try {
         // Load user data
-        currentUser = await api.getCurrentUser();
+        currentUser = await authAPI.getCurrentUser();
         
         // Load subscription info
         await loadSubscriptionInfo();
@@ -55,7 +55,7 @@ async function loadMyListings() {
     const grid = document.getElementById('my-listings-grid');
     
     try {
-        const response = await api.getMyVehicles();
+        const response = await vehicleAPI.getMyVehicles();
         
         if (response.vehicles && response.vehicles.length > 0) {
             grid.innerHTML = response.vehicles.map(vehicle => createMyListingCard(vehicle)).join('');
@@ -147,12 +147,12 @@ async function handleCreateListing(event) {
         submitBtn.textContent = 'Creating...';
         
         // Create vehicle
-        const vehicle = await api.createVehicle(vehicleData);
+        const vehicle = await vehicleAPI.createVehicle(vehicleData);
         
         // Upload images if selected
         const imageInput = document.getElementById('vehicle-images');
         if (imageInput.files.length > 0) {
-            await api.uploadVehicleImages(vehicle.id, imageInput.files);
+            await vehicleAPI.uploadVehicleImages(vehicle.id, imageInput.files);
         }
         
         closeCreateListingModal();
@@ -177,7 +177,7 @@ async function deleteListing(id) {
     }
     
     try {
-        await api.deleteVehicle(id);
+        await vehicleAPI.deleteVehicle(id);
         showNotification('Listing deleted successfully', 'success');
         loadMyListings();
     } catch (error) {
@@ -191,7 +191,7 @@ async function showSubscriptionPlans() {
     const grid = document.getElementById('subscription-plans-grid');
     
     try {
-        const plans = await api.getSubscriptionPlans();
+        const plans = await subscriptionAPI.getPlans();
         
         grid.innerHTML = plans.map(plan => `
             <div class="plan-card">
@@ -216,7 +216,7 @@ async function showSubscriptionPlans() {
 // Subscribe to plan
 async function subscribeToPlan(tier) {
     try {
-        const response = await api.subscribe(tier);
+        const response = await subscriptionAPI.subscribe(tier);
         
         if (response.payment_url) {
             // Redirect to PayFast

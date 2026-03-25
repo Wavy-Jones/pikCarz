@@ -96,6 +96,28 @@ const vehicleAPI = {
   async createVehicle(vehicleData) {
     return api.post('/api/vehicles', vehicleData);
   },
+
+  async uploadVehicleImages(vehicleId, files) {
+  const formData = new FormData();
+  
+  for (let file of files) {
+    formData.append('images', file);
+  }
+
+  const token = localStorage.getItem('auth_token');
+
+  const response = await fetch(`${API_CONFIG.BASE_URL}/api/vehicles/${vehicleId}/images`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  });
+
+  if (!response.ok) throw new Error('Image upload failed');
+
+  return response.json();
+},
   
   // Update vehicle (requires auth)
   async updateVehicle(id, vehicleData) {
