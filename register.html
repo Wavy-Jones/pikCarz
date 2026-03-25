@@ -176,7 +176,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ full_name: name, email, password })
     });
 
     if (!response.ok) {
