@@ -185,8 +185,14 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     }
 
     // Success
-    alert('Account created successfully! Please sign in.');
-    window.location.href = 'signin.html';
+    const data = await response.json();
+
+    // Save token
+    localStorage.setItem('auth_token', data.access_token);
+    localStorage.setItem('user_data', JSON.stringify(data.user));
+
+    // Redirect to dashboard
+    window.location.href = 'dashboard.html';
 
   } catch (error) {
     errorDiv.textContent = error.message;
