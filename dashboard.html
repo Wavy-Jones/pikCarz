@@ -1,11 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+    <script>
+        const token = localStorage.getItem('auth_token');
+
+        if (!token) {
+        window.location.href = 'signin.html';
+        }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - pikCarz</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    
 </head>
 <body>
     <!-- Navigation -->
