@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehicle Details — pikCarz</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .vehicle-detail-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .vehicle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .vehicle-title-section h1 {
+      font-size: 2rem;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .vehicle-price {
+      font-size: 2.5rem;
+      color: var(--accent);
+      font-weight: 800;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+
+    .vehicle-gallery {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+      margin-bottom: 40px;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .main-image {
+      grid-row: span 2;
+      aspect-ratio: 16/10;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .main-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumbnail {
+      aspect-ratio: 16/10;
+      overflow: hidden;
+      background: var(--surface);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .thumbnail:hover {
+      opacity: 0.8;
+    }
+
+    .thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .vehicle-content {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 40px;
+    }
+
+    .vehicle-specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .spec-item {
+      background: var(--surface);
+      padding: 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .spec-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .spec-value {
+      font-size: 1.1rem;
+      color: var(--white);
+      font-weight: 600;
+    }
+
+    .vehicle-description {
+      background: var(--card);
+      padding: 24px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .vehicle-description h3 {
+      margin-bottom: 16px;
+      color: var(--white);
+    }
+
+    .vehicle-description p {
+      color: var(--muted);
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    .seller-card {
+      background: var(--card);
+      padding: 24px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      position: sticky;
+      top: 100px;
+    }
+
+    .seller-card h3 {
+      margin-bottom: 16px;
+      color: var(--white);
+    }
+
+    .seller-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .seller-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    .seller-details h4 {
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .seller-details p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .contact-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-contact {
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-contact-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-contact-secondary {
+      background: var(--surface);
+      color: var(--white);
+      border: 1px solid var(--border);
+    }
+
+    .btn-contact:hover {
+      transform: translateY(-2px);
+    }
+
+    .location-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--surface);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .vehicle-content {
+        grid-template-columns: 1fr;
+      }
+
+      .vehicle-gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .main-image {
+        grid-row: span 1;
+      }
+
+      .seller-card {
+        position: relative;
+        top: 0;
+      }
+    }
+
+    .loading-spinner {
+      text-align: center;
+      padding: 100px 20px;
+      color: var(--muted);
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      padding: 20px;
+      border-radius: var(--radius);
+      text-align: center;
+      margin: 40px 20px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<header class="navbar">
+  <nav class="nav-inner">
+    <a href="index.html" class="logo">
+      <img src="Logo.png" alt="pikCarz" class="logo-img" />
+      <span class="logo-sub">Powered by Cubeas</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="browse.html">Browse Vehicles</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="nav-actions">
+      <a href="signin.html" class="btn-ghost">Sign In</a>
+      <a href="signin.html" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        List Vehicle
+      </a>
+    </div>
+    <button class="hamburger"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu">
+  <button class="mobile-close"><svg viewBox="0 0 24 24" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <a href="index.html">Home</a>
+  <a href="browse.html">Browse Vehicles</a>
+  <a href="about.html">About Us</a>
+  <a href="contact.html">Contact</a>
+  <a href="signin.html" style="color:var(--accent)">List Your Vehicle</a>
+</div>
+
+<!-- Loading State -->
+<div id="loading" class="loading-spinner">
+  <p>Loading vehicle details...</p>
+</div>
+
+<!-- Error State -->
+<div id="error" style="display: none;" class="error-message">
+  <h3>Vehicle Not Found</h3>
+  <p>The vehicle you're looking for doesn't exist or has been removed.</p>
+  <a href="browse.html" class="btn-primary" style="margin-top: 16px; display: inline-block;">← Back to Browse</a>
+</div>
+
+<!-- Vehicle Detail Content -->
+<div id="vehicle-content" style="display: none;">
+  <div class="vehicle-detail-container">
+    
+    <!-- Breadcrumb & Header -->
+    <div style="margin-bottom: 24px;">
+      <div class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <a href="browse.html">Browse</a>
+        <span>/</span>
+        <span id="breadcrumb-title">Vehicle</span>
+      </div>
+    </div>
+
+    <div class="vehicle-header">
+      <div class="vehicle-title-section">
+        <h1 id="vehicle-title">Loading...</h1>
+        <div class="vehicle-price" id="vehicle-price">R 0</div>
+      </div>
+      <button class="btn-ghost" onclick="history.back()">← Back to Listings</button>
+    </div>
+
+    <!-- Image Gallery -->
+    <div class="vehicle-gallery" id="vehicle-gallery">
+      <div class="main-image">
+        <img id="main-image" src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80" alt="Vehicle" />
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="vehicle-content">
+      
+      <!-- Left Column: Specs & Description -->
+      <div>
+        <!-- Specs Grid -->
+        <div class="vehicle-specs-grid" id="specs-grid">
+          <!-- Specs will be loaded dynamically -->
+        </div>
+
+        <!-- Description -->
+        <div class="vehicle-description">
+          <h3>Description</h3>
+          <p id="vehicle-description">Loading description...</p>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="vehicle-description">
+          <h3>Vehicle Information</h3>
+          <div id="vehicle-info">
+            <p><strong>Category:</strong> <span id="vehicle-category">-</span></p>
+            <p><strong>Status:</strong> <span id="vehicle-status">-</span></p>
+            <p><strong>Listed:</strong> <span id="vehicle-date">-</span></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Seller Card -->
+      <div>
+        <div class="seller-card">
+          <h3>Contact Seller</h3>
+          
+          <div class="seller-info">
+            <div class="seller-avatar" id="seller-avatar">S</div>
+            <div class="seller-details">
+              <h4 id="seller-name">Loading...</h4>
+              <p id="seller-type">Private Seller</p>
+            </div>
+          </div>
+
+          <div class="contact-buttons">
+            <button class="btn-contact btn-contact-primary" onclick="contactSeller('call')">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              Call Seller
+            </button>
+            
+            <button class="btn-contact btn-contact-secondary" onclick="contactSeller('email')">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              Send Email
+            </button>
+
+            <button class="btn-contact btn-contact-secondary" onclick="shareVehicle()">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              Share
+            </button>
+          </div>
+
+          <div class="location-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span id="vehicle-location">Location</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo">
+          <img src="Logo.png" alt="pikCarz" class="logo-img" />
+          <span class="logo-sub">Powered by Cubeas</span>
+        </a>
+        <p>South Africa's growing vehicle marketplace.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Browse</h5>
+        <ul>
+          <li><a href="browse.html">All Vehicles</a></li>
+          <li><a href="browse.html?type=new">New Cars</a></li>
+          <li><a href="browse.html?type=used">Used Cars</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="about.html">About Us</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 pikCarz — A <strong>Cubeas</strong> product.</p>
+      <div class="footer-socials">
+        <a href="#" class="social-btn" aria-label="Facebook" title="Follow us on Facebook"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+        <a href="#" class="social-btn" aria-label="Instagram" title="Follow us on Instagram"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="#" class="social-btn" aria-label="TikTok" title="Follow us on TikTok"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg></a>
+        <a href="#" class="social-btn" aria-label="LinkedIn" title="Connect with us on LinkedIn"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/main.js"></script>
+<script>
+// Get vehicle ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const vehicleId = urlParams.get('id');
+
+let currentVehicle = null;
+
+// Format price
+function formatPrice(price) {
+  return 'R ' + parseFloat(price).toLocaleString('en-ZA');
+}
+
+// Format date
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// Load vehicle details
+async function loadVehicle() {
+  if (!vehicleId) {
+    showError();
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/vehicles/${vehicleId}`);
+    
+    if (!response.ok) {
+      showError();
+      return;
+    }
+
+    currentVehicle = await response.json();
+    displayVehicle(currentVehicle);
+    
+  } catch (error) {
+    console.error('Error loading vehicle:', error);
+    showError();
+  }
+}
+
+// Display vehicle details
+function displayVehicle(vehicle) {
+  // Hide loading, show content
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('vehicle-content').style.display = 'block';
+
+  // Set title and breadcrumb
+  const titleText = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  document.getElementById('vehicle-title').textContent = titleText;
+  document.getElementById('breadcrumb-title').textContent = titleText;
+  document.title = `${titleText} — pikCarz`;
+
+  // Set price
+  document.getElementById('vehicle-price').textContent = formatPrice(vehicle.price);
+
+  // Set images
+  if (vehicle.images && vehicle.images.length > 0) {
+    const gallery = document.getElementById('vehicle-gallery');
+    gallery.innerHTML = '';
+
+    // Main image
+    const mainDiv = document.createElement('div');
+    mainDiv.className = 'main-image';
+    mainDiv.innerHTML = `<img id="main-image" src="${vehicle.images[0]}" alt="${titleText}" />`;
+    gallery.appendChild(mainDiv);
+
+    // Thumbnails (up to 3 additional)
+    for (let i = 1; i < Math.min(vehicle.images.length, 4); i++) {
+      const thumbDiv = document.createElement('div');
+      thumbDiv.className = 'thumbnail';
+      thumbDiv.innerHTML = `<img src="${vehicle.images[i]}" alt="View ${i + 1}" />`;
+      thumbDiv.onclick = () => {
+        document.getElementById('main-image').src = vehicle.images[i];
+      };
+      gallery.appendChild(thumbDiv);
+    }
+  }
+
+  // Set specs
+  const specsGrid = document.getElementById('specs-grid');
+  specsGrid.innerHTML = `
+    <div class="spec-item">
+      <div class="spec-label">Year</div>
+      <div class="spec-value">${vehicle.year}</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-label">Mileage</div>
+      <div class="spec-value">${vehicle.mileage ? vehicle.mileage.toLocaleString() + ' km' : 'Not specified'}</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-label">Transmission</div>
+      <div class="spec-value">${vehicle.transmission || 'Not specified'}</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-label">Fuel Type</div>
+      <div class="spec-value">${vehicle.fuel_type || 'Not specified'}</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-label">Color</div>
+      <div class="spec-value">${vehicle.color || 'Not specified'}</div>
+    </div>
+    <div class="spec-item">
+      <div class="spec-label">Make</div>
+      <div class="spec-value">${vehicle.make}</div>
+    </div>
+  `;
+
+  // Set description
+  document.getElementById('vehicle-description').textContent = vehicle.description || 'No description provided.';
+
+  // Set additional info
+  document.getElementById('vehicle-category').textContent = vehicle.category.replace('_', ' ').toUpperCase();
+  document.getElementById('vehicle-status').textContent = vehicle.status.toUpperCase();
+  document.getElementById('vehicle-date').textContent = formatDate(vehicle.created_at);
+
+  // Set location
+  document.getElementById('vehicle-location').textContent = vehicle.city ? `${vehicle.city}, ${vehicle.province}` : vehicle.province;
+
+  // Set seller info
+  if (vehicle.seller_name) {
+    document.getElementById('seller-name').textContent = vehicle.seller_name;
+    document.getElementById('seller-avatar').textContent = vehicle.seller_name.charAt(0).toUpperCase();
+  }
+  if (vehicle.seller_type) {
+    document.getElementById('seller-type').textContent = vehicle.seller_type === 'dealer' ? 'Verified Dealer' : 'Private Seller';
+  }
+}
+
+// Show error
+function showError() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = 'block';
+}
+
+// Contact seller
+function contactSeller(method) {
+  if (!currentVehicle) return;
+
+  if (method === 'call') {
+    // In production, show seller's phone number
+    alert('To protect seller privacy, please sign in to view contact details.');
+    window.location.href = 'signin.html?redirect=' + encodeURIComponent(window.location.href);
+  } else if (method === 'email') {
+    // In production, show contact form or seller email
+    alert('To contact the seller, please sign in first.');
+    window.location.href = 'signin.html?redirect=' + encodeURIComponent(window.location.href);
+  }
+}
+
+// Share vehicle
+function shareVehicle() {
+  if (navigator.share) {
+    navigator.share({
+      title: document.getElementById('vehicle-title').textContent,
+      text: `Check out this vehicle on pikCarz: ${document.getElementById('vehicle-title').textContent}`,
+      url: window.location.href
+    }).catch(err => console.log('Error sharing:', err));
+  } else {
+    // Fallback: copy to clipboard
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      alert('Link copied to clipboard!');
+    });
+  }
+}
+
+// Load vehicle on page load
+window.addEventListener('DOMContentLoaded', loadVehicle);
+</script>
+
+</body>
+</html>
