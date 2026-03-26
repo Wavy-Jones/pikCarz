@@ -307,7 +307,14 @@
       
     } catch (error) {
       console.error('Error loading pending vehicles:', error);
-      listDiv.innerHTML = `<p style="color: #ef4444;">Error loading pending vehicles. Please refresh.</p>`;
+      listDiv.innerHTML = `
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:28px;text-align:center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width:40px;height:40px;margin-bottom:12px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p style="color:#ef4444;font-weight:600;margin-bottom:6px">Could not load pending vehicles</p>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px">This may be a temporary network or API issue. Check your connection or try again.</p>
+          <button onclick="loadPendingVehicles()" class="btn-primary" style="font-size:0.85rem;padding:10px 20px">🔄 Retry</button>
+        </div>
+      `;
     }
   }
   

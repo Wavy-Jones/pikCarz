@@ -47,6 +47,10 @@ async function loadSubscriptionInfo() {
         }
     } catch (error) {
         console.error('Error loading subscription:', error);
+        const tierElement = document.querySelector('.subscription-tier');
+        const expiresElement = document.querySelector('.subscription-expires');
+        if (tierElement) tierElement.textContent = 'No Active Plan';
+        if (expiresElement) expiresElement.textContent = 'Subscribe to list your vehicles';
     }
 }
 
