@@ -58,6 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelector('.filter-btn')?.addEventListener('click', async () => {
     currentFilters.page = 1; // Reset to page 1
     await loadVehicles();
+    // Scroll to top so user sees the results header
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   
   // Sort dropdown
@@ -85,6 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentFilters.page = 1;
       
       await loadVehicles();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
   
@@ -119,6 +122,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (resultsCount) {
         const showing = append ? gridContainer.querySelectorAll('.vehicle-card').length + data.vehicles.length : data.vehicles.length;
         resultsCount.innerHTML = `Showing <strong>${showing}</strong> of <strong>${data.total}</strong> vehicles`;
+        // Flash the results bar so users notice it after filter scroll-to-top
+        if (!append) {
+          resultsCount.style.transition = 'background 0.3s';
+          resultsCount.style.background = 'rgba(240,90,26,0.12)';
+          resultsCount.style.borderRadius = '6px';
+          resultsCount.style.padding = '6px 10px';
+          setTimeout(() => { resultsCount.style.background = 'transparent'; }, 1200);
+        }
       }
       
       // Render vehicles
@@ -186,10 +197,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentFilters.make = makeInputs[1].value;
     }
     
-    // Price range
-    const priceInputs = document.querySelectorAll('.price-range input');
-    if (priceInputs[0]?.value) currentFilters.min_price = priceInputs[0].value;
-    if (priceInputs[1]?.value) currentFilters.max_price = priceInputs[1].value;
+    // Price range (dropdown: "0-100000", "100000-200000", "900000+")
+    const priceSelect = document.querySelectorAll('.filter-group select')[3]; // 4th select = price
+    if (priceSelect?.value) {
+      if (priceSelect.value === '900000+') {
+        currentFilters.min_price = 900000;
+        currentFilters.max_price = '';
+      } else {
+        const [min, max] = priceSelect.value.split('-');
+        currentFilters.min_price = min || '';
+        currentFilters.max_price = max || '';
+      }
+    } else {
+      currentFilters.min_price = '';
+      currentFilters.max_price = '';
+    }
     
     // Province
     const provinceSelect = document.querySelector('.filter-group select:last-of-type');

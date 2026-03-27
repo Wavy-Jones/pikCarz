@@ -13,44 +13,44 @@ async function initDashboard() {
         return;
     }
 
-    try {
-        // Load user data
-        currentUser = await authAPI.getCurrentUser();
-        
-        // Load subscription info
-        await loadSubscriptionInfo();
-        
-        // Load user listings
-        await loadMyListings();
-        
-    } catch (error) {
-        console.error('Dashboard init error:', error);
-        showNotification('Failed to load dashboard data', 'error');
+    // Use stored user data immediately (no API call needed for basic display)
+    currentUser = authAPI.getUser();
+
+    // Update the user display name in nav if element exists
+    const userNameEl = document.querySelector('.user-name');
+    if (userNameEl && currentUser) {
+        userNameEl.textContent = currentUser.full_name || currentUser.email || '';
     }
+
+    // Load each section independently so one failure doesn't block others
+    await Promise.allSettled([
+        loadSubscriptionInfo(),
+        loadMyListings()
+    ]);
 }
 
 // Load subscription info
 async function loadSubscriptionInfo() {
+    const tierElement = document.querySelector('.subscription-tier');
+    const expiresElement = document.querySelector('.subscription-expires');
+
+    // Set a sensible default immediately so it never stays as "Loading..."
+    if (tierElement) tierElement.textContent = 'No Active Plan';
+    if (expiresElement) expiresElement.textContent = 'Choose a plan to start listing vehicles';
+
     try {
-        currentSubscription = await api.getMySubscription();
-        
-        const tierElement = document.querySelector('.subscription-tier');
-        const expiresElement = document.querySelector('.subscription-expires');
-        
-        if (tierElement) {
-            tierElement.textContent = `${currentSubscription.current_plan.name} Plan - R${currentSubscription.current_plan.price}/month`;
+        currentSubscription = await api.get('/api/subscriptions/my');
+
+        if (tierElement && currentSubscription?.current_plan) {
+            tierElement.textContent = `${currentSubscription.current_plan.name} Plan — R${currentSubscription.current_plan.price}/month`;
         }
-        
-        if (expiresElement && currentSubscription.expires_at) {
+        if (expiresElement && currentSubscription?.expires_at) {
             const expiryDate = new Date(currentSubscription.expires_at);
-            expiresElement.textContent = `Expires: ${expiryDate.toLocaleDateString()}`;
+            expiresElement.textContent = `Expires: ${expiryDate.toLocaleDateString('en-ZA')}`;
         }
     } catch (error) {
-        console.error('Error loading subscription:', error);
-        const tierElement = document.querySelector('.subscription-tier');
-        const expiresElement = document.querySelector('.subscription-expires');
-        if (tierElement) tierElement.textContent = 'No Active Plan';
-        if (expiresElement) expiresElement.textContent = 'Subscribe to list your vehicles';
+        // Silently keep the default text set above — no red error banner
+        console.warn('Subscription info unavailable:', error.message);
     }
 }
 
@@ -71,7 +71,15 @@ async function loadMyListings() {
         }
     } catch (error) {
         console.error('Error loading listings:', error);
-        grid.innerHTML = '<p class="error">Failed to load listings</p>';
+        grid.innerHTML = `
+            <div style="text-align:center;padding:48px 20px;color:var(--muted);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:48px;height:48px;margin-bottom:16px;stroke:var(--muted)">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p style="margin-bottom:16px;">Could not load your listings right now.<br>This may be a temporary issue.</p>
+                <button onclick="loadMyListings()" class="btn-primary" style="font-size:0.85rem;padding:10px 20px">🔄 Retry</button>
+            </div>
+        `;
     }
 }
 
