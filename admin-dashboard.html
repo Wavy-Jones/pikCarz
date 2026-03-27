@@ -229,7 +229,7 @@
   async function loadDashboard() {
     document.getElementById('admin-name').textContent = userData.full_name || 'Admin';
     
-    await Promise.all([
+    await Promise.allSettled([
       loadStats(),
       loadPendingVehicles()
     ]);
@@ -260,31 +260,31 @@
   // Load pending vehicles
   async function loadPendingVehicles() {
     const listDiv = document.getElementById('pending-vehicles-list');
+    listDiv.innerHTML = '<p style="color:var(--muted)">Loading pending vehicles…</p>';
     
     try {
       const response = await fetch(`${API_BASE}/api/admin/vehicles/pending?per_page=50`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      if (!response.ok) throw new Error('Failed to load pending vehicles');
+      if (!response.ok) throw new Error(`Server returned ${response.status}`);
       
       const data = await response.json();
+      const vehicles = data.vehicles || data.items || data || [];
       
-      if (data.vehicles.length === 0) {
+      if (!vehicles.length) {
         listDiv.innerHTML = `
           <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <circle cx="12" cy="12" r="10"></circle>
               <path d="M9 11l3 3L22 4"></path>
             </svg>
-            <h3 style="color: var(--white); margin-bottom: 8px;">All Clear!</h3>
-            <p>No pending vehicles to review.</p>
-          </div>
-        `;
+            <h3 style="color:var(--white);margin-bottom:8px">All Clear!</h3>
+            <p>No vehicles waiting for approval right now.</p>
+          </div>`;
         return;
       }
-      
-      listDiv.innerHTML = data.vehicles.map(vehicle => `
+      listDiv.innerHTML = vehicles.map(vehicle => `
         <div class="pending-vehicle" id="vehicle-${vehicle.id}">
           <div class="vehicle-info">
             <h4>${vehicle.year} ${vehicle.make} ${vehicle.model}</h4>
