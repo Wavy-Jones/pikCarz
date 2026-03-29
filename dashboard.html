@@ -812,7 +812,7 @@ async function loadPlans() {
 
 async function subscribePlan(tier) {
   try {
-    const res = await api.post('/api/subscriptions/subscribe', { tier });
+    const res = await api.post(`/api/subscriptions/subscribe/${tier}`);
     if (res.payment_url) window.location.href = res.payment_url;
   } catch (err) {
     showToast('Could not initiate subscription: ' + err.message, 'error');
