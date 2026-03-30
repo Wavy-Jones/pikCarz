@@ -29,6 +29,20 @@ const api = {
       const response = await fetch(url, config);
       
       if (!response.ok) {
+        // Handle expired / invalid session — redirect to sign-in cleanly
+        if (response.status === 401) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_data');
+          // Only redirect if we're on a protected page (not already on sign-in/register)
+          const onAuthPage = window.location.pathname.includes('signin') ||
+                             window.location.pathname.includes('register') ||
+                             window.location.pathname.includes('forgot-password') ||
+                             window.location.pathname.includes('reset-password');
+          if (!onAuthPage) {
+            window.location.href = 'signin.html?session=expired';
+          }
+          throw new Error('Your session has expired. Please sign in again.');
+        }
         const error = await response.json().catch(() => ({ detail: 'Request failed' }));
         throw new Error(error.detail || `HTTP ${response.status}`);
       }

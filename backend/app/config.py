@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days
     
     # CORS
     FRONTEND_URL: str = "https://pikcarz.co.za"

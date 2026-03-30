@@ -379,8 +379,25 @@ h3 { font-size: 1.5rem; }
 .delay-3 { animation-delay: 0.3s; }
 .delay-4 { animation-delay: 0.4s; }
 
+/* ── Password Toggle ─────────────────────── */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 48px !important; }
+.pw-toggle {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--muted); display: flex; align-items: center;
+  transition: color var(--transition);
+}
+.pw-toggle:hover { color: var(--white); }
+.pw-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+
 /* ── Mobile Menu ─────────────────────────── */
-.mobile-menu { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(31,33,40,0.98); backdrop-filter: blur(20px); flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+.mobile-menu {
+  display: none; position: fixed; inset: 0; z-index: 999;
+  background: rgba(31,33,40,0.98); backdrop-filter: blur(20px);
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px; overflow-y: auto; padding: 80px 24px 40px;
+}
 .mobile-menu.open { display: flex; }
 .mobile-menu a { font-family: 'Barlow Condensed', sans-serif; font-size: 2rem; font-weight: 700; color: var(--white); letter-spacing: -0.5px; transition: color var(--transition); }
 .mobile-menu a:hover { color: var(--accent); }
@@ -393,6 +410,11 @@ h3 { font-size: 1.5rem; }
   .filter-panel  { position: static; }
   .hero-visual   { opacity: 0.2; width: 65%; }
   .about-grid    { grid-template-columns: 1fr; }
+}
+/* Tablet nav — hide links at ≤960px so they don't squash */
+@media (max-width: 960px) {
+  .nav-links, .nav-actions { display: none; }
+  .hamburger { display: flex; }
 }
 @media (max-width: 768px) {
   .nav-links, .nav-actions { display: none; }

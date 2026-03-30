@@ -134,6 +134,9 @@
   
   <h1>Welcome Back</h1>
   
+  <div id="session-banner" class="error-message" style="background:rgba(245,158,11,0.1);border-color:#f59e0b;color:#f59e0b;display:none">
+    ⏰ Your session expired — please sign in again.
+  </div>
   <div id="error-message" class="error-message"></div>
   
   <form id="signin-form">
@@ -151,14 +154,19 @@
     
     <div class="form-group">
       <label for="password">Password</label>
-      <input 
-        type="password" 
-        id="password" 
-        name="password" 
-        required 
-        placeholder="Enter your password"
-        autocomplete="current-password"
-      />
+      <div class="pw-wrap">
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          required 
+          placeholder="Enter your password"
+          autocomplete="current-password"
+        />
+        <button type="button" class="pw-toggle" onclick="togglePw('password', this)" aria-label="Show password">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
     </div>
     
     <button type="submit" class="signin-btn" id="signin-btn">
@@ -180,6 +188,21 @@
 
 <script>
   const API_BASE = 'https://pikcarz.vercel.app';
+
+  // Show session-expired banner if redirected from api.js 401 handler
+  if (new URLSearchParams(window.location.search).get('session') === 'expired') {
+    document.getElementById('session-banner').style.display = 'block';
+  }
+
+  function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    btn.innerHTML = isHidden
+      ? `<svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M6.53 6.53 17.47 17.47"/></svg>`
+      : `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  }
   
   // Add timeout to fetch to catch hanging requests
   async function fetchWithTimeout(url, options, timeout = 10000) {
