@@ -168,13 +168,19 @@
   <!-- Stats Overview -->
   <div class="admin-header">
     <h1>Admin Dashboard</h1>
-    <button onclick="refreshDashboard()" class="btn-primary">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-      </svg>
-      Refresh
-    </button>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button onclick="openAdminListingModal()" class="btn-primary" style="background:#10b981;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Free Listing
+      </button>
+      <button onclick="refreshDashboard()" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        Refresh
+      </button>
+    </div>
   </div>
   
   <div class="admin-stats">
@@ -208,6 +214,103 @@
     </div>
   </div>
   
+</div>
+
+<!-- ── Admin Free Listing Modal ────────────── -->
+<div id="admin-listing-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;position:relative;">
+    <button onclick="closeAdminListingModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer;line-height:1;">&times;</button>
+    <h2 style="margin-bottom:6px;color:var(--white);">Add Free Listing</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px;">Admin listing — Dealer Pro access, no charge.</p>
+    <form id="admin-create-form" onsubmit="handleAdminCreate(event)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Make *</label>
+          <select id="al-make" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+            <option value="">Select make…</option>
+            <option>Audi</option><option>BMW</option><option>Chery</option><option>Chevrolet</option><option>Citroen</option><option>DFSK</option><option>Ford</option><option>GWM</option><option>Haval</option><option>Honda</option><option>Hyundai</option><option>Isuzu</option><option>Jaguar</option><option>Jeep</option><option>Kia</option><option>Land Rover</option><option>Lexus</option><option>Mahindra</option><option>Mazda</option><option>Mercedes-Benz</option><option>Mitsubishi</option><option>Nissan</option><option>Opel</option><option>Peugeot</option><option>Porsche</option><option>Renault</option><option>Skoda</option><option>Subaru</option><option>Suzuki</option><option>Toyota</option><option>Volkswagen</option><option>Volvo</option><option>Other</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Model *</label>
+          <input type="text" id="al-model" placeholder="e.g. Hilux" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Year *</label>
+          <select id="al-year" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+            <option value="">Select year…</option>
+            <option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option><option>2010</option><option>2009</option><option>2008</option><option>2007</option><option>2006</option><option>2005</option><option>2004</option><option>2003</option><option>2002</option><option>2001</option><option>2000</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Price (R) *</label>
+          <input type="number" id="al-price" min="0" placeholder="350000" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Mileage (km) *</label>
+          <input type="number" id="al-mileage" min="0" placeholder="45000" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Category *</label>
+          <select id="al-category" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+            <option value="used_car">Used Car</option><option value="new_car">New Car</option><option value="motorcycle">Motorcycle</option><option value="truck">Truck / Bakkie</option><option value="van">Van</option><option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Transmission *</label>
+          <select id="al-transmission" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+            <option>Automatic</option><option>Manual</option><option>Semi-Automatic</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Fuel Type *</label>
+          <select id="al-fuel" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+            <option>Petrol</option><option>Diesel</option><option>Electric</option><option>Hybrid</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Colour *</label>
+          <input type="text" id="al-color" placeholder="e.g. White" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Province *</label>
+          <select id="al-province" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+            <option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Free State</option><option>Northern Cape</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">City *</label>
+        <input type="text" id="al-city" placeholder="e.g. Johannesburg" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label>
+        <input type="text" id="al-title" placeholder="e.g. 2023 Toyota Hilux 2.8 GD-6 — Excellent Condition" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+        <p style="font-size:0.8rem;color:var(--muted);margin-top:4px">💡 Include vehicle type (Car, Bakkie, Truck, Motorbike) in the title.</p>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description *</label>
+        <textarea id="al-description" rows="4" placeholder="Describe the vehicle — condition, service history, extras, reason for selling…" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Photos (max 10)</label>
+        <input type="file" id="al-images" multiple accept="image/*" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+      </div>
+      <div id="admin-create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem;"></div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button type="button" onclick="closeAdminListingModal()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
+        <button type="submit" id="admin-create-btn" class="btn-primary" style="flex:1;padding:12px">Create Listing</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
@@ -404,6 +507,84 @@
       window.location.href = 'signin.html';
     }
   }
+
+  /* ── Admin Free Listing Modal ─────────────────── */
+  function openAdminListingModal() {
+    document.getElementById('admin-listing-modal').style.display = 'flex';
+  }
+  function closeAdminListingModal() {
+    document.getElementById('admin-listing-modal').style.display = 'none';
+    document.getElementById('admin-create-form').reset();
+    document.getElementById('admin-create-error').style.display = 'none';
+  }
+
+  async function handleAdminCreate(e) {
+    e.preventDefault();
+    const errDiv = document.getElementById('admin-create-error');
+    const btn    = document.getElementById('admin-create-btn');
+    errDiv.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    const payload = {
+      make:         document.getElementById('al-make').value,
+      model:        document.getElementById('al-model').value,
+      year:         parseInt(document.getElementById('al-year').value),
+      price:        parseFloat(document.getElementById('al-price').value),
+      mileage:      parseInt(document.getElementById('al-mileage').value),
+      category:     document.getElementById('al-category').value,
+      transmission: document.getElementById('al-transmission').value,
+      fuel_type:    document.getElementById('al-fuel').value,
+      color:        document.getElementById('al-color').value,
+      province:     document.getElementById('al-province').value,
+      city:         document.getElementById('al-city').value,
+      title:        document.getElementById('al-title').value,
+      description:  document.getElementById('al-description').value,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/vehicles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
+      }
+
+      const vehicle = await res.json();
+
+      // Upload images if selected
+      const imgInput = document.getElementById('al-images');
+      if (imgInput.files.length > 0) {
+        const fd = new FormData();
+        for (const f of imgInput.files) fd.append('images', f);
+        await fetch(`${API_BASE}/api/vehicles/${vehicle.id}/images`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: fd
+        });
+      }
+
+      closeAdminListingModal();
+      alert('✅ Listing created! It is now pending approval (you can approve it below).');
+      await loadDashboard();
+
+    } catch (err) {
+      errDiv.textContent = err.message || 'Failed to create listing. Please try again.';
+      errDiv.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Listing';
+    }
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('admin-listing-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeAdminListingModal();
+  });
 </script>
 
 </body>

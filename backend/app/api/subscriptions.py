@@ -51,7 +51,8 @@ SUBSCRIPTION_PLANS = {
             "Top featured placement",
             "Premium badge",
             "Priority support",
-            "Analytics dashboard"
+            "Analytics dashboard",
+            "Lead tracking (calls & messages)"
         ]
     },
     "dealer_basic": {
@@ -65,12 +66,13 @@ SUBSCRIPTION_PLANS = {
             "Verified dealer badge",
             "Bulk upload",
             "Advanced analytics",
-            "Dedicated support"
+            "Dedicated support",
+            "Lead management dashboard"
         ]
     },
     "dealer_pro": {
         "name": "Dealer Pro",
-        "price": 1999,  # R1,999/month
+        "price": 1999,  # R1,999/month — increases to R2,399 after first 100 subscribers
         "duration_days": 30,
         "max_listings": 200,
         "features": [
@@ -80,7 +82,8 @@ SUBSCRIPTION_PLANS = {
             "Bulk upload",
             "Advanced analytics",
             "Priority placement",
-            "Dedicated account manager"
+            "Dedicated account manager",
+            "Lead management dashboard"
         ]
     }
 }

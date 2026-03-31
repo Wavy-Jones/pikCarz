@@ -593,6 +593,7 @@
       <div class="form-group">
         <label>Listing Title *</label>
         <input type="text" id="v-title" placeholder="e.g. 2022 Toyota Hilux 2.8 GD-6 — Excellent Condition" required>
+        <p class="form-hint">💡 Include the vehicle type in your title (e.g. Car, Bakkie, Truck, Motorbike) so buyers can find it quickly.</p>
       </div>
       <div class="form-group">
         <label>Description *</label>
@@ -673,14 +674,15 @@ document.addEventListener('DOMContentLoaded', () => {
 ══════════════════════════════════════════ */
 async function loadSubscription() {
   try {
-    const data = await api.get('/api/subscriptions/my');
-    if (data?.current_plan) {
+    // Use getSilent so a 401 here won't wipe the session
+    const data = await api.getSilent('/api/subscriptions/my-subscription');
+    if (data?.tier && data.tier !== 'free') {
       document.getElementById('sub-plan').textContent =
-        `${data.current_plan.name} Plan — R${data.current_plan.price}/month`;
+        data.tier.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) + ' Plan';
     }
-    if (data?.expires_at) {
+    if (data?.expires) {
       document.getElementById('sub-expires').textContent =
-        `Expires: ${new Date(data.expires_at).toLocaleDateString('en-ZA')}`;
+        `Expires: ${new Date(data.expires).toLocaleDateString('en-ZA')}`;
     }
   } catch {
     // Keep the default "No Active Plan" text — no error shown
@@ -848,13 +850,38 @@ async function loadPlans() {
     const plans = await api.get('/api/subscriptions/plans');
     if (!plans || !plans.length) throw new Error('No plans');
 
-    container.innerHTML = plans.map(plan => `
-      <div class="plan-card">
+    container.innerHTML = plans.map(plan => {
+      const isFree        = plan.tier === 'free';
+      const isPopular     = plan.tier === 'dealer_basic';
+      const isDealerPro   = plan.tier === 'dealer_pro';
+      const isPremium     = plan.tier === 'premium';
+
+      const popularBadge = isPopular
+        ? `<div style="display:inline-block;background:#f59e0b;color:#000;font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">🔥 Most Popular</div>`
+        : '';
+
+      const dealerProNote = isDealerPro
+        ? `<p style="font-size:0.78rem;color:#f59e0b;font-weight:600;margin-bottom:12px;line-height:1.5">⏳ Available at this price for the first 100 subscribers — price increases to R2,399/month after.</p>`
+        : '';
+
+      const trialBadge = (isPremium || isPopular || isDealerPro)
+        ? `<div style="display:inline-block;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:100px;margin-bottom:14px">✅ ${ isPremium ? '7-day' : '14-day'} free trial</div>`
+        : '';
+
+      const btnLabel = isFree ? 'Select Plan' : 'Upgrade Now';
+      const cardBorder = isPopular ? 'border-color:#f59e0b;' : '';
+
+      return `
+      <div class="plan-card" style="${cardBorder}position:relative">
+        ${popularBadge}
+        ${trialBadge}
         <h3>${plan.name}</h3>
         <div class="plan-price">R ${plan.price}<span style="font-size:0.85rem;font-weight:400;color:var(--muted)">/month</span></div>
+        ${dealerProNote}
         <ul class="plan-features">${(plan.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
-        <button onclick="subscribePlan('${plan.tier}')" class="btn-primary" style="width:100%">Select Plan</button>
-      </div>`).join('');
+        <button onclick="subscribePlan('${plan.tier}')" class="btn-primary" style="width:100%">${btnLabel}</button>
+      </div>`;
+    }).join('');
   } catch {
     container.innerHTML = `<p style="color:var(--muted);text-align:center;padding:32px">Plans could not be loaded. Please contact support at <a href="mailto:info@pikcarz.co.za" style="color:var(--accent)">info@pikcarz.co.za</a>.</p>`;
   }

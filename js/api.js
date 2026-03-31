@@ -31,15 +31,17 @@ const api = {
       if (!response.ok) {
         // Handle expired / invalid session — redirect to sign-in cleanly
         if (response.status === 401) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          // Only redirect if we're on a protected page (not already on sign-in/register)
-          const onAuthPage = window.location.pathname.includes('signin') ||
-                             window.location.pathname.includes('register') ||
-                             window.location.pathname.includes('forgot-password') ||
-                             window.location.pathname.includes('reset-password');
-          if (!onAuthPage) {
-            window.location.href = 'signin.html?session=expired';
+          // Only wipe session + redirect if this is NOT a silent/background call
+          if (!options._silent) {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            const onAuthPage = window.location.pathname.includes('signin') ||
+                               window.location.pathname.includes('register') ||
+                               window.location.pathname.includes('forgot-password') ||
+                               window.location.pathname.includes('reset-password');
+            if (!onAuthPage) {
+              window.location.href = 'signin.html?session=expired';
+            }
           }
           throw new Error('Your session has expired. Please sign in again.');
         }
@@ -59,6 +61,13 @@ const api = {
     const queryString = new URLSearchParams(params).toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
     return this.request(url, { method: 'GET' });
+  },
+
+  // Silent GET — 401 won't wipe session or redirect (for background/optional calls)
+  async getSilent(endpoint, params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    return this.request(url, { method: 'GET', _silent: true });
   },
   
   // POST request
