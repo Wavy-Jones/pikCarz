@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard — pikCarz</title>
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23FF4545'/><text y='.9em' font-size='70' x='10' fill='white' font-weight='900'>P</text></svg>" />
+  <link rel="icon" href="favicon.jpeg" type="image/jpeg" />
   <style>
     /* Admin-specific styles */
     .admin-container {
@@ -293,7 +293,7 @@
       </div>
       <div style="margin-bottom:16px">
         <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label>
-        <input type="text" id="al-title" placeholder="e.g. 2023 Toyota Hilux 2.8 GD-6 — Excellent Condition" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+        <input type="text" id="al-title" placeholder="e.g. Toyota Bakkie" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
         <p style="font-size:0.8rem;color:var(--muted);margin-top:4px">💡 Include vehicle type (Car, Bakkie, Truck, Motorbike) in the title.</p>
       </div>
       <div style="margin-bottom:16px">
@@ -526,6 +526,16 @@
     btn.disabled = true;
     btn.textContent = 'Creating…';
 
+    // Always read the token fresh — not the stale page-load copy
+    const freshToken = localStorage.getItem('auth_token');
+    if (!freshToken) {
+      errDiv.textContent = 'Session expired — please log in again.';
+      errDiv.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Create Listing';
+      return;
+    }
+
     const payload = {
       make:         document.getElementById('al-make').value,
       model:        document.getElementById('al-model').value,
@@ -542,15 +552,37 @@
       description:  document.getElementById('al-description').value,
     };
 
+    // Helper: fetch with timeout + 1 automatic retry for Vercel cold starts
+    async function fetchWithRetry(url, options, timeoutMs = 20000) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const res = await fetch(url, { ...options, signal: controller.signal });
+          clearTimeout(tid);
+          return res;
+        } catch (err) {
+          clearTimeout(tid);
+          if (attempt === 2) throw new Error('Request timed out — server may be waking up. Please try again in a moment.');
+          btn.textContent = 'Retrying…';
+          await new Promise(r => setTimeout(r, 2000));
+          btn.textContent = 'Creating…';
+        }
+      }
+    }
+
     try {
-      const res = await fetch(`${API_BASE}/api/vehicles`, {
+      const res = await fetchWithRetry(`${API_BASE}/api/vehicles`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
         body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        // Friendly messages for common errors
+        if (res.status === 401) throw new Error('Session expired — please log out and log in again to get a fresh session.');
+        if (res.status === 422) throw new Error('Some fields are invalid. Please check all fields and try again.');
         throw new Error(err.detail || `Server error ${res.status}`);
       }
 
@@ -561,9 +593,9 @@
       if (imgInput.files.length > 0) {
         const fd = new FormData();
         for (const f of imgInput.files) fd.append('images', f);
-        await fetch(`${API_BASE}/api/vehicles/${vehicle.id}/images`, {
+        await fetchWithRetry(`${API_BASE}/api/vehicles/${vehicle.id}/images`, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { 'Authorization': `Bearer ${freshToken}` },
           body: fd
         });
       }
