@@ -67,35 +67,44 @@ function updateNavbar() {
 // Update mobile menu based on auth state
 function updateMobileMenu() {
   const mobileMenu = document.querySelector('.mobile-menu');
-  const user = getCurrentUser();
-  
   if (!mobileMenu) return;
-  
+
+  const user = getCurrentUser();
+  const closeBtn = mobileMenu.querySelector('.mobile-close');
+
   if (isLoggedIn() && user) {
-    // User is logged in
     const isAdmin = user.role === 'admin';
     const dashboardUrl = isAdmin ? 'admin-dashboard.html' : 'dashboard.html';
     const dashboardText = isAdmin ? 'Admin Dashboard' : 'My Dashboard';
-    
-    // Find the last link and replace it
-    const links = mobileMenu.querySelectorAll('a');
-    if (links.length > 0) {
-      const lastLink = links[links.length - 1];
-      lastLink.href = dashboardUrl;
-      lastLink.textContent = dashboardText;
-      lastLink.style.color = 'var(--accent)';
-      
-      // Add logout link
-      if (!mobileMenu.querySelector('.mobile-logout')) {
-        const logoutBtn = document.createElement('button');
-        logoutBtn.className = 'mobile-logout';
-        logoutBtn.textContent = 'Logout';
-        logoutBtn.onclick = logout;
-        logoutBtn.style.cssText = 'width: 100%; padding: 16px 24px; background: none; border: none; color: var(--muted); text-align: left; cursor: pointer; font-size: 1rem;';
-        mobileMenu.appendChild(logoutBtn);
-      }
-    }
+
+    mobileMenu.innerHTML = `
+      <button class="mobile-close" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <a href="index.html">Home</a>
+      <a href="browse.html">Browse Vehicles</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact</a>
+      <a href="${dashboardUrl}" style="color:var(--accent)">${dashboardText}</a>
+      <button class="mobile-logout" onclick="logout()" style="font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:700;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:-0.5px;">Logout</button>
+    `;
+  } else {
+    mobileMenu.innerHTML = `
+      <button class="mobile-close" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <a href="index.html">Home</a>
+      <a href="browse.html">Browse Vehicles</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact</a>
+      <a href="signin.html">Sign In</a>
+      <a href="register.html" style="color:var(--accent)">Sign Up</a>
+    `;
   }
+
+  // Re-attach close button listener after rebuilding
+  mobileMenu.querySelector('.mobile-close')?.addEventListener('click', () => mobileMenu.classList.remove('open'));
+  mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.remove('open')));
 }
 
 // Protect dashboard pages (redirect if not logged in)
