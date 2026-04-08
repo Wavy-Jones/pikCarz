@@ -49,8 +49,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Failed to send welcome email: {str(e)}")
     
-    # Create token
-    access_token = create_access_token(data={"sub": new_user.id})
+    # Create token — sub MUST be a string per JWT spec (RFC 7519)
+    access_token = create_access_token(data={"sub": str(new_user.id)})
     
     return {
         "access_token": access_token,
@@ -74,8 +74,8 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is inactive")
     
-    # Create token
-    access_token = create_access_token(data={"sub": user.id})
+    # Create token — sub MUST be a string per JWT spec (RFC 7519)
+    access_token = create_access_token(data={"sub": str(user.id)})
     
     return {
         "access_token": access_token,

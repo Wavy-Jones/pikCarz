@@ -11,8 +11,26 @@ const API_CONFIG = {
 
 // API Helper Functions
 const api = {
+  // Check JWT expiry client-side before sending any request
+  _checkTokenExpiry() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const b64 = token.split('.')[1];
+      const { exp } = JSON.parse(atob(b64.replace(/-/g, '+').replace(/_/g, '/')));
+      if (exp && exp * 1000 < Date.now()) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        const onAuthPage = window.location.pathname.includes('signin') ||
+                           window.location.pathname.includes('register');
+        if (!onAuthPage) window.location.href = 'signin.html?session=expired';
+      }
+    } catch (_) { /* malformed token — ignore */ }
+  },
+
   // Generic fetch wrapper with error handling
   async request(endpoint, options = {}) {
+    this._checkTokenExpiry();
     const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     const token = localStorage.getItem('auth_token');
     

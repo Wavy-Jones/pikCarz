@@ -25,8 +25,14 @@ def get_current_user(
     if payload is None:
         raise credentials_exception
     
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    # sub is stored as a string (JWT spec) but may be an int in older tokens
+    # safely coerce to int either way
+    sub = payload.get("sub")
+    if sub is None:
+        raise credentials_exception
+    try:
+        user_id = int(sub)
+    except (ValueError, TypeError):
         raise credentials_exception
     
     user = db.query(User).filter(User.id == user_id).first()

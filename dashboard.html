@@ -793,6 +793,23 @@ async function handleCreate(e) {
   errDiv.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Creating…';
 
+  // Client-side JWT expiry check — redirect before wasting an API call
+  const currentToken = localStorage.getItem('auth_token');
+  if (!currentToken) {
+    doLogout();
+    return;
+  }
+  try {
+    const payloadB64 = currentToken.split('.')[1];
+    const decoded = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+      window.location.href = 'signin.html?session=expired';
+      return;
+    }
+  } catch (_) { /* malformed — let server handle it */ }
+
   const payload = {
     make:         document.getElementById('v-make').value,
     model:        document.getElementById('v-model').value,
@@ -818,11 +835,15 @@ async function handleCreate(e) {
       const fd = new FormData();
       for (const f of imgInput.files) fd.append('images', f);
       const token = localStorage.getItem('auth_token');
-      await fetch(`https://pikcarz.vercel.app/api/vehicles/${vehicle.id}/images`, {
+      const imgRes = await fetch(`https://pikcarz.vercel.app/api/vehicles/${vehicle.id}/images`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: fd
       });
+      if (imgRes.status === 401) {
+        // Vehicle was created but image upload session expired— continue anyway
+        showToast('Listing created! Sign in again to add photos.', 'info');
+      }
     }
 
     closeCreateModal();
