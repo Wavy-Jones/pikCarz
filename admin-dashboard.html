@@ -563,9 +563,10 @@
       city:         document.getElementById('al-city').value,
       title:        document.getElementById('al-title').value,
       description:  document.getElementById('al-description').value,
+      images:       [],
     };
 
-    // Helper: fetch with timeout + 1 automatic retry for Vercel cold starts
+    // Helper: fetch with timeout + retry for Vercel cold starts
     async function fetchWithRetry(url, options, timeoutMs = 20000) {
       for (let attempt = 1; attempt <= 2; attempt++) {
         const controller = new AbortController();
@@ -576,7 +577,7 @@
           return res;
         } catch (err) {
           clearTimeout(tid);
-          if (attempt === 2) throw new Error('Request timed out — server may be waking up. Please try again in a moment.');
+          if (attempt === 2) throw new Error('Request timed out — please try again.');
           btn.textContent = 'Retrying…';
           await new Promise(r => setTimeout(r, 2000));
           btn.textContent = 'Creating…';
@@ -585,6 +586,42 @@
     }
 
     try {
+      // Step 1: Upload images DIRECTLY to Cloudinary from the browser
+      const imgInput = document.getElementById('al-images');
+      if (imgInput.files.length > 0) {
+        btn.textContent = `Uploading photos (0/${imgInput.files.length})…`;
+
+        // Get signed upload credentials from backend
+        const sigRes = await fetchWithRetry(`${API_BASE}/api/vehicles/upload-signature`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${freshToken}` }
+        });
+        if (!sigRes.ok) throw new Error('Could not get upload credentials. Try again.');
+        const sig = await sigRes.json();
+
+        // Upload all images in parallel directly to Cloudinary
+        const uploads = Array.from(imgInput.files).map((file) => {
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('api_key',   sig.api_key);
+          fd.append('timestamp', sig.timestamp);
+          fd.append('signature', sig.signature);
+          fd.append('folder',    sig.folder);
+          fd.append('eager',     sig.eager);
+          return fetch(
+            `https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`,
+            { method: 'POST', body: fd }
+          ).then(r => r.json()).then(r => {
+            if (r.error) throw new Error(r.error.message);
+            return (r.eager && r.eager[0]) ? r.eager[0].secure_url : r.secure_url;
+          });
+        });
+
+        payload.images = await Promise.all(uploads);
+        btn.textContent = 'Creating listing…';
+      }
+
+      // Step 2: Create the vehicle with images already in payload
       const res = await fetchWithRetry(`${API_BASE}/api/vehicles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
@@ -605,18 +642,6 @@
       }
 
       const vehicle = await res.json();
-
-      // Upload images if selected
-      const imgInput = document.getElementById('al-images');
-      if (imgInput.files.length > 0) {
-        const fd = new FormData();
-        for (const f of imgInput.files) fd.append('images', f);
-        await fetchWithRetry(`${API_BASE}/api/vehicles/${vehicle.id}/images`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${freshToken}` },
-          body: fd
-        });
-      }
 
       closeAdminListingModal();
       alert('✅ Listing created! It is now pending approval (you can approve it below).');

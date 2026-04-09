@@ -824,27 +824,45 @@ async function handleCreate(e) {
     city:         document.getElementById('v-city').value,
     title:        document.getElementById('v-title').value,
     description:  document.getElementById('v-description').value,
+    images:       [],
   };
 
   try {
-    const vehicle = await api.post('/api/vehicles', payload);
-
-    // Upload images if selected
+    // Step 1: Upload images DIRECTLY to Cloudinary from the browser
+    // This bypasses Vercel entirely — no timeout possible
     const imgInput = document.getElementById('v-images');
     if (imgInput.files.length > 0) {
-      const fd = new FormData();
-      for (const f of imgInput.files) fd.append('images', f);
-      const token = localStorage.getItem('auth_token');
-      const imgRes = await fetch(`https://pikcarz.vercel.app/api/vehicles/${vehicle.id}/images`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: fd
+      btn.textContent = `Uploading photos (0/${imgInput.files.length})…`;
+
+      // Get a signed upload credential from our backend
+      const sigRes = await api.post('/api/vehicles/upload-signature');
+
+      // Upload every image in parallel directly to Cloudinary
+      const uploads = Array.from(imgInput.files).map((file, i) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('api_key',   sigRes.api_key);
+        fd.append('timestamp', sigRes.timestamp);
+        fd.append('signature', sigRes.signature);
+        fd.append('folder',    sigRes.folder);
+        fd.append('eager',     sigRes.eager);
+        return fetch(
+          `https://api.cloudinary.com/v1_1/${sigRes.cloud_name}/image/upload`,
+          { method: 'POST', body: fd }
+        ).then(r => r.json()).then(r => {
+          if (r.error) throw new Error(r.error.message);
+          // Prefer the eager (resized) URL if available, otherwise the original
+          return (r.eager && r.eager[0]) ? r.eager[0].secure_url : r.secure_url;
+        });
       });
-      if (imgRes.status === 401) {
-        // Vehicle was created but image upload session expired— continue anyway
-        showToast('Listing created! Sign in again to add photos.', 'info');
-      }
+
+      // Wait for all uploads to complete in parallel
+      payload.images = await Promise.all(uploads);
+      btn.textContent = 'Creating listing…';
     }
+
+    // Step 2: Create the vehicle — images are already in the payload
+    const vehicle = await api.post('/api/vehicles', payload);
 
     closeCreateModal();
     document.getElementById('create-form').reset();

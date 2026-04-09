@@ -22,7 +22,7 @@ class VehicleBase(BaseModel):
     city: Optional[str] = None
 
 class VehicleCreate(VehicleBase):
-    pass
+    images: Optional[List[str]] = []  # Accept pre-uploaded Cloudinary URLs
 
 class VehicleUpdate(BaseModel):
     make: Optional[str] = None

@@ -11,9 +11,39 @@ from app.models import VehicleStatus, VehicleCategory
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse, VehicleListResponse
 from app.core.deps import get_current_user
 from app.services.cloudinary import upload_multiple_vehicle_images, delete_vehicle_images
+from app.config import settings
 from datetime import datetime, timedelta
+import time
+import hashlib
 
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
+
+
+@router.post("/upload-signature")
+def get_upload_signature(current_user: User = Depends(get_current_user)):
+    """
+    Return a signed Cloudinary upload signature so the browser can
+    upload images directly to Cloudinary without proxying through Vercel.
+    This completely bypasses Vercel's timeout limit.
+    """
+    timestamp = int(time.time())
+    folder = f"pikcarz/vehicles"
+    eager = "c_limit,h_800,q_auto:good,w_1200/f_auto"
+
+    # Cloudinary requires params sorted alphabetically
+    params_to_sign = f"eager={eager}&folder={folder}&timestamp={timestamp}"
+    signature = hashlib.sha256(
+        f"{params_to_sign}{settings.CLOUDINARY_API_SECRET}".encode()
+    ).hexdigest()
+
+    return {
+        "timestamp": timestamp,
+        "signature": signature,
+        "cloud_name": settings.CLOUDINARY_CLOUD_NAME,
+        "api_key": settings.CLOUDINARY_API_KEY,
+        "folder": folder,
+        "eager": eager,
+    }
 
 @router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
 def create_vehicle(
@@ -39,8 +69,9 @@ def create_vehicle(
         description=vehicle_data.description,
         province=vehicle_data.province,
         city=vehicle_data.city,
-        status=VehicleStatus.PENDING,  # Admin approval required
-        expires_at=datetime.utcnow() + timedelta(days=30)  # 30-day listing
+        images=vehicle_data.images or [],  # Save pre-uploaded Cloudinary URLs
+        status=VehicleStatus.PENDING,
+        expires_at=datetime.utcnow() + timedelta(days=30)
     )
     
     db.add(new_vehicle)
