@@ -51,7 +51,9 @@ def get_current_active_dealer(current_user: User = Depends(get_current_user)) ->
     return current_user
 
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Ensure current user is an admin"""
-    if not current_user.is_superuser:
+    """Ensure current user is an admin — accepts role=admin OR is_superuser=True"""
+    from app.models import UserRole
+    is_admin = (current_user.role == UserRole.ADMIN) or current_user.is_superuser
+    if not is_admin:
         raise HTTPException(status_code=403, detail="Not authorized - admin access required")
     return current_user

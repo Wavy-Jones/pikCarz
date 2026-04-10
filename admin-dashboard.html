@@ -343,21 +343,24 @@
   async function loadStats() {
     try {
       const response = await fetch(`${API_BASE}/api/admin/stats`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       
-      if (!response.ok) throw new Error('Failed to load stats');
+      if (!response.ok) throw new Error(`${response.status}`);
       
       const stats = await response.json();
       
-      document.getElementById('stat-users').textContent = stats.total_users || 0;
-      document.getElementById('stat-vehicles').textContent = stats.total_vehicles || 0;
-      document.getElementById('stat-active').textContent = stats.active_vehicles || 0;
-      document.getElementById('stat-pending').textContent = stats.pending_vehicles || 0;
-      document.getElementById('stat-dealers').textContent = stats.verified_dealers || 0;
+      document.getElementById('stat-users').textContent    = stats.total_users    || 0;
+      document.getElementById('stat-vehicles').textContent = stats.total_vehicles  || 0;
+      document.getElementById('stat-active').textContent   = stats.active_vehicles || 0;
+      document.getElementById('stat-pending').textContent  = stats.pending_vehicles|| 0;
+      document.getElementById('stat-dealers').textContent  = stats.verified_dealers|| 0;
       
     } catch (error) {
       console.error('Error loading stats:', error);
+      // Show dashes instead of 0 so admin knows data didn't load
+      ['stat-users','stat-vehicles','stat-active','stat-pending','stat-dealers']
+        .forEach(id => { document.getElementById(id).textContent = '—'; });
     }
   }
   
@@ -368,7 +371,7 @@
     
     try {
       const response = await fetch(`${API_BASE}/api/admin/vehicles/pending?per_page=50`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       
       if (!response.ok) throw new Error(`Server returned ${response.status}`);
@@ -379,9 +382,8 @@
       if (!vehicles.length) {
         listDiv.innerHTML = `
           <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9 11l3 3L22 4"></path>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="stroke:#10b981">
+              <circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>
             </svg>
             <h3 style="color:var(--white);margin-bottom:8px">All Clear!</h3>
             <p>No vehicles waiting for approval right now.</p>
@@ -392,19 +394,21 @@
         <div class="pending-vehicle" id="vehicle-${vehicle.id}">
           <div class="vehicle-info">
             <h4>${vehicle.year} ${vehicle.make} ${vehicle.model}</h4>
-            <p><strong>Title:</strong> ${vehicle.title}</p>
-            <p><strong>Seller:</strong> ${vehicle.seller_name} (${vehicle.seller_type})</p>
-            <p><strong>Location:</strong> ${vehicle.city}, ${vehicle.province}</p>
-            <p><strong>Mileage:</strong> ${vehicle.mileage.toLocaleString()} km | <strong>Transmission:</strong> ${vehicle.transmission}</p>
-            <p class="price">R ${vehicle.price.toLocaleString()}</p>
+            <p><strong>Title:</strong> ${vehicle.title || 'N/A'}</p>
+            <p><strong>Seller:</strong> ${vehicle.seller_name || 'Unknown'} (${vehicle.seller_type || 'individual'})</p>
+            <p><strong>Location:</strong> ${vehicle.city || ''}, ${vehicle.province || ''}</p>
+            <p><strong>Mileage:</strong> ${(vehicle.mileage || 0).toLocaleString()} km | <strong>Transmission:</strong> ${vehicle.transmission || 'N/A'}</p>
+            ${vehicle.images && vehicle.images.length > 0
+              ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                  ${vehicle.images.slice(0,4).map(img => `<img src="${img}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />`).join('')}
+                  ${vehicle.images.length > 4 ? `<div style="width:80px;height:60px;border-radius:6px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);font-size:0.85rem">+${vehicle.images.length - 4} more</div>` : ''}
+                </div>`
+              : '<p style="color:var(--muted);font-size:0.82rem;margin-top:6px">&#128247; No photos uploaded</p>'}
+            <p class="price" style="margin-top:10px">R ${Number(vehicle.price).toLocaleString('en-ZA')}</p>
           </div>
           <div class="vehicle-actions">
-            <button class="btn-approve" onclick="approveVehicle(${vehicle.id})">
-              ✓ Approve
-            </button>
-            <button class="btn-reject" onclick="rejectVehicle(${vehicle.id})">
-              ✗ Reject
-            </button>
+            <button class="btn-approve" onclick="approveVehicle(${vehicle.id})">&#10003; Approve</button>
+            <button class="btn-reject"  onclick="rejectVehicle(${vehicle.id})">&#10007; Reject</button>
           </div>
         </div>
       `).join('');
@@ -429,7 +433,7 @@
     try {
       const response = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/approve`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       
       if (!response.ok) throw new Error('Failed to approve vehicle');
@@ -465,7 +469,7 @@
     try {
       const response = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/reject`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       
       if (!response.ok) throw new Error('Failed to reject vehicle');
