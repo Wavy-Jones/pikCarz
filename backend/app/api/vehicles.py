@@ -24,16 +24,15 @@ def get_upload_signature(current_user: User = Depends(get_current_user)):
     """
     Return a signed Cloudinary upload signature so the browser can
     upload images directly to Cloudinary without proxying through Vercel.
-    This completely bypasses Vercel's timeout limit.
     """
     timestamp = int(time.time())
-    folder = f"pikcarz/vehicles"
-    eager = "c_limit,h_800,q_auto:good,w_1200/f_auto"
+    folder = "pikcarz/vehicles"
 
-    # Cloudinary requires params sorted alphabetically
-    params_to_sign = f"eager={eager}&folder={folder}&timestamp={timestamp}"
-    signature = hashlib.sha256(
-        f"{params_to_sign}{settings.CLOUDINARY_API_SECRET}".encode()
+    # Cloudinary signature: sort params alphabetically, concatenate,
+    # append API secret, then SHA-1 hash (NOT SHA-256)
+    params_to_sign = f"folder={folder}&timestamp={timestamp}"
+    signature = hashlib.sha1(
+        f"{params_to_sign}{settings.CLOUDINARY_API_SECRET}".encode("utf-8")
     ).hexdigest()
 
     return {
@@ -42,7 +41,6 @@ def get_upload_signature(current_user: User = Depends(get_current_user)):
         "cloud_name": settings.CLOUDINARY_CLOUD_NAME,
         "api_key": settings.CLOUDINARY_API_KEY,
         "folder": folder,
-        "eager": eager,
     }
 
 @router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)

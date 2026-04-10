@@ -828,36 +828,58 @@ async function handleCreate(e) {
   };
 
   try {
-    // Step 1: Upload images DIRECTLY to Cloudinary from the browser
-    // This bypasses Vercel entirely — no timeout possible
+    // Step 1: Compress & upload images DIRECTLY to Cloudinary from the browser
     const imgInput = document.getElementById('v-images');
     if (imgInput.files.length > 0) {
-      btn.textContent = `Uploading photos (0/${imgInput.files.length})…`;
+      btn.textContent = `Uploading photo 1 of ${imgInput.files.length}…`;
 
-      // Get a signed upload credential from our backend
+      // Get signed credentials from backend
       const sigRes = await api.post('/api/vehicles/upload-signature');
 
-      // Upload every image in parallel directly to Cloudinary
-      const uploads = Array.from(imgInput.files).map((file, i) => {
+      // Compress image client-side using Canvas (handles large mobile photos)
+      function compressImage(file) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            const MAX = 1200;
+            let { width, height } = img;
+            if (width > MAX || height > MAX) {
+              if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+              else { width = Math.round(width * MAX / height); height = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob(blob => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.82);
+          };
+          img.onerror = () => resolve(file); // fallback: use original
+          img.src = url;
+        });
+      }
+
+      // Upload images one-by-one (more reliable on mobile than parallel)
+      const imageUrls = [];
+      const files = Array.from(imgInput.files);
+      for (let i = 0; i < files.length; i++) {
+        btn.textContent = `Uploading photo ${i + 1} of ${files.length}…`;
+        const compressed = await compressImage(files[i]);
         const fd = new FormData();
-        fd.append('file', file);
+        fd.append('file',      compressed);
         fd.append('api_key',   sigRes.api_key);
         fd.append('timestamp', sigRes.timestamp);
         fd.append('signature', sigRes.signature);
         fd.append('folder',    sigRes.folder);
-        fd.append('eager',     sigRes.eager);
-        return fetch(
+        const res = await fetch(
           `https://api.cloudinary.com/v1_1/${sigRes.cloud_name}/image/upload`,
           { method: 'POST', body: fd }
-        ).then(r => r.json()).then(r => {
-          if (r.error) throw new Error(r.error.message);
-          // Prefer the eager (resized) URL if available, otherwise the original
-          return (r.eager && r.eager[0]) ? r.eager[0].secure_url : r.secure_url;
-        });
-      });
-
-      // Wait for all uploads to complete in parallel
-      payload.images = await Promise.all(uploads);
+        );
+        const data = await res.json();
+        if (data.error) throw new Error(`Photo ${i+1} failed: ${data.error.message}`);
+        imageUrls.push(data.secure_url);
+      }
+      payload.images = imageUrls;
       btn.textContent = 'Creating listing…';
     }
 
