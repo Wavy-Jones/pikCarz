@@ -214,6 +214,17 @@
       <p style="color: var(--muted);">Loading pending vehicles...</p>
     </div>
   </div>
+
+  <!-- All Listings Section -->
+  <div class="pending-section" style="margin-top:32px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>💼 All Listings</h2>
+      <button onclick="loadAllListings()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
+    </div>
+    <div id="all-listings-list">
+      <p style="color:var(--muted)">Loading all listings…</p>
+    </div>
+  </div>
   
 </div>
 
@@ -332,10 +343,10 @@
   // Load dashboard data
   async function loadDashboard() {
     document.getElementById('admin-name').textContent = userData.full_name || 'Admin';
-    
     await Promise.allSettled([
       loadStats(),
-      loadPendingVehicles()
+      loadPendingVehicles(),
+      loadAllListings()
     ]);
   }
   
@@ -502,6 +513,68 @@
   async function refreshDashboard() {
     await loadDashboard();
     alert('✅ Dashboard refreshed!');
+  }
+
+  // Load ALL listings (for admin management)
+  async function loadAllListings() {
+    const listDiv = document.getElementById('all-listings-list');
+    listDiv.innerHTML = '<p style="color:var(--muted);padding:20px">Loading…</p>';
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/vehicles/all?per_page=50`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!response.ok) throw new Error(`${response.status}`);
+      const data = await response.json();
+      const vehicles = data.vehicles || [];
+      if (!vehicles.length) {
+        listDiv.innerHTML = '<p style="color:var(--muted);padding:20px">No listings yet.</p>';
+        return;
+      }
+      const statusColour = { active: '#10b981', pending: '#f59e0b', rejected: '#ef4444', expired: '#6b7280', sold: '#3b82f6' };
+      listDiv.innerHTML = vehicles.map(v => `
+        <div class="pending-vehicle" id="all-vehicle-${v.id}">
+          <div class="vehicle-info">
+            <h4>${v.year} ${v.make} ${v.model}</h4>
+            <p><strong>Title:</strong> ${v.title || 'N/A'}</p>
+            <p><strong>Seller:</strong> ${v.seller_name || 'Unknown'} &nbsp;|
+               <strong>Location:</strong> ${v.city || ''}, ${v.province || ''}</p>
+            <p><strong>Price:</strong> <span style="color:var(--accent);font-weight:700">R ${Number(v.price).toLocaleString('en-ZA')}</span>
+               &nbsp;|&nbsp;
+               <strong>Status:</strong> <span style="color:${statusColour[v.status]||'#fff'};font-weight:700;text-transform:uppercase">${v.status}</span>
+            </p>
+            ${v.images && v.images.length > 0
+              ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${v.images.slice(0,3).map(img => `<img src="${img}" style="width:70px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />`).join('')}</div>`
+              : ''}
+          </div>
+          <div class="vehicle-actions" style="flex-direction:column">
+            ${v.status === 'pending'
+              ? `<button class="btn-approve" onclick="approveVehicle(${v.id})" style="margin-bottom:8px">✓ Approve</button>
+                 <button class="btn-reject"  onclick="rejectVehicle(${v.id})"  style="margin-bottom:8px">✗ Reject</button>`
+              : ''}
+            <button onclick="adminDeleteVehicle(${v.id})" style="background:#ef4444;color:#fff;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">🗑 Delete</button>
+          </div>
+        </div>`).join('');
+    } catch(err) {
+      listDiv.innerHTML = `<p style="color:#ef4444;padding:20px">Could not load listings: ${err.message} &nbsp; <button onclick="loadAllListings()" class="btn-primary" style="padding:8px 16px">🔄 Retry</button></p>`;
+    }
+  }
+
+  async function adminDeleteVehicle(vehicleId) {
+    if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      // Remove from both sections if visible
+      document.getElementById(`all-vehicle-${vehicleId}`)?.remove();
+      document.getElementById(`vehicle-${vehicleId}`)?.remove();
+      await loadStats();
+      alert('✅ Listing deleted.');
+    } catch(err) {
+      alert('Could not delete: ' + err.message);
+    }
   }
   
   // Logout
