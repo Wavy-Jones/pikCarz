@@ -35,43 +35,239 @@
     }
 
     .vehicle-gallery {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 12px;
+      position: relative;
       margin-bottom: 40px;
       border-radius: var(--radius);
       overflow: hidden;
-    }
-
-    .main-image {
-      grid-row: span 2;
-      aspect-ratio: 16/10;
-      overflow: hidden;
       background: var(--surface);
     }
 
-    .main-image img {
+    /* ── Main image ── */
+    .gallery-main {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      cursor: zoom-in;
+      background: #111;
+    }
+
+    .gallery-main img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-    }
-
-    .thumbnail {
-      aspect-ratio: 16/10;
-      overflow: hidden;
-      background: var(--surface);
-      cursor: pointer;
+      display: block;
       transition: opacity 0.2s;
     }
 
-    .thumbnail:hover {
-      opacity: 0.8;
+    .gallery-main-overlay {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: none;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(4px);
     }
 
-    .thumbnail img {
+    .gallery-counter {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ── Thumbnail strip ── */
+    .gallery-thumbs {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      overflow-x: auto;
+      background: var(--primary);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .gallery-thumbs::-webkit-scrollbar { height: 4px; }
+    .gallery-thumbs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .gallery-thumb {
+      flex-shrink: 0;
+      width: 90px;
+      height: 64px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, opacity 0.15s;
+      opacity: 0.65;
+    }
+
+    .gallery-thumb.active {
+      border-color: var(--accent);
+      opacity: 1;
+    }
+
+    .gallery-thumb:hover { opacity: 1; }
+
+    .gallery-thumb img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
+    }
+
+    /* ── Prev/Next arrows ── */
+    .gallery-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.55);
+      border: none;
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 5;
+      transition: background 0.15s;
+      backdrop-filter: blur(4px);
+    }
+
+    .gallery-arrow:hover { background: rgba(255,69,69,0.75); }
+    .gallery-arrow.prev { left: 12px; }
+    .gallery-arrow.next { right: 12px; }
+    .gallery-arrow svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.5; }
+
+    /* ── Lightbox ── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.96);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #lightbox.open { display: flex; }
+
+    #lightbox-img {
+      max-width: 92vw;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 6px;
+      cursor: grab;
+      transition: transform 0.15s ease;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    #lightbox-img.zoomed { cursor: zoom-out; }
+
+    .lb-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lb-counter {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.7);
+      font-size: 0.9rem;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    .lb-arrow {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .lb-arrow:hover { background: rgba(255,69,69,0.6); }
+    .lb-arrow.prev { left: 16px; }
+    .lb-arrow.next { right: 16px; }
+    .lb-arrow svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2.5; }
+
+    .lb-thumbs {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      max-width: 90vw;
+      overflow-x: auto;
+      padding: 4px;
+    }
+
+    .lb-thumb {
+      flex-shrink: 0;
+      width: 56px;
+      height: 40px;
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0.5;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .lb-thumb.active { opacity: 1; border-color: var(--accent); }
+    .lb-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .zoom-hint {
+      position: fixed;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.45);
+      font-size: 0.75rem;
+      pointer-events: none;
     }
 
     .vehicle-content {
@@ -326,9 +522,21 @@
 
     <!-- Image Gallery -->
     <div class="vehicle-gallery" id="vehicle-gallery">
-      <div class="main-image">
-        <img id="main-image" src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80" alt="Vehicle" />
+      <div class="gallery-main" id="gallery-main" onclick="openLightbox(currentImageIndex)">
+        <img id="main-image" src="" alt="Vehicle" />
+        <button class="gallery-arrow prev" onclick="event.stopPropagation();changeImage(-1)">
+          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="gallery-arrow next" onclick="event.stopPropagation();changeImage(1)">
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <span class="gallery-counter" id="gallery-counter">1 / 1</span>
+        <button class="gallery-main-overlay" onclick="event.stopPropagation();openLightbox(currentImageIndex)">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          View Full Screen
+        </button>
       </div>
+      <div class="gallery-thumbs" id="gallery-thumbs"></div>
     </div>
 
     <!-- Main Content Grid -->
@@ -406,6 +614,17 @@
 
     </div>
   </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button class="lb-close" onclick="closeLightbox()">&times;</button>
+  <span class="lb-counter" id="lb-counter">1 / 1</span>
+  <button class="lb-arrow prev" onclick="lbNav(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+  <img id="lightbox-img" src="" alt="" onclick="toggleZoom(event)" />
+  <button class="lb-arrow next" onclick="lbNav(1)"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+  <p class="zoom-hint">Tap image to zoom &nbsp;&bull;&nbsp; Swipe or use arrow keys to navigate</p>
+  <div class="lb-thumbs" id="lb-thumbs"></div>
 </div>
 
 <!-- Footer -->
@@ -509,27 +728,154 @@ function displayVehicle(vehicle) {
   // Set price
   document.getElementById('vehicle-price').textContent = formatPrice(vehicle.price);
 
-  // Set images
-  if (vehicle.images && vehicle.images.length > 0) {
-    const gallery = document.getElementById('vehicle-gallery');
-    gallery.innerHTML = '';
+  // Set images — ALL of them
+  let allImages = [];
+  let currentImageIndex = 0;
+
+  function buildGallery(images, titleText) {
+    allImages = images;
+    currentImageIndex = 0;
+
+    const mainImg   = document.getElementById('main-image');
+    const thumbsEl  = document.getElementById('gallery-thumbs');
+    const counterEl = document.getElementById('gallery-counter');
+
+    // Show arrows only if more than 1 image
+    document.querySelectorAll('.gallery-arrow').forEach(a =>
+      a.style.display = images.length > 1 ? 'flex' : 'none'
+    );
 
     // Main image
-    const mainDiv = document.createElement('div');
-    mainDiv.className = 'main-image';
-    mainDiv.innerHTML = `<img id="main-image" src="${vehicle.images[0]}" alt="${titleText}" />`;
-    gallery.appendChild(mainDiv);
+    mainImg.src = images[0];
+    mainImg.alt = titleText;
+    counterEl.textContent = `1 / ${images.length}`;
 
-    // Thumbnails (up to 3 additional)
-    for (let i = 1; i < Math.min(vehicle.images.length, 4); i++) {
-      const thumbDiv = document.createElement('div');
-      thumbDiv.className = 'thumbnail';
-      thumbDiv.innerHTML = `<img src="${vehicle.images[i]}" alt="View ${i + 1}" />`;
-      thumbDiv.onclick = () => {
-        document.getElementById('main-image').src = vehicle.images[i];
-      };
-      gallery.appendChild(thumbDiv);
+    // Thumbnail strip — ALL images
+    thumbsEl.innerHTML = images.map((src, i) => `
+      <div class="gallery-thumb ${i === 0 ? 'active' : ''}" onclick="setImage(${i})">
+        <img src="${src}" alt="Photo ${i+1}" loading="lazy" />
+      </div>`).join('');
+
+    // Lightbox thumbnails
+    document.getElementById('lb-thumbs').innerHTML = images.map((src, i) => `
+      <div class="lb-thumb ${i === 0 ? 'active' : ''}" onclick="lbGoTo(${i})">
+        <img src="${src}" alt="Photo ${i+1}" loading="lazy" />
+      </div>`).join('');
+  }
+
+  function setImage(index) {
+    if (!allImages.length) return;
+    currentImageIndex = (index + allImages.length) % allImages.length;
+    document.getElementById('main-image').src = allImages[currentImageIndex];
+    document.getElementById('gallery-counter').textContent = `${currentImageIndex + 1} / ${allImages.length}`;
+    // Update thumb highlights
+    document.querySelectorAll('.gallery-thumb').forEach((t, i) =>
+      t.classList.toggle('active', i === currentImageIndex)
+    );
+    // Scroll active thumb into view
+    const activeThumb = document.querySelectorAll('.gallery-thumb')[currentImageIndex];
+    activeThumb?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+
+  function changeImage(dir) { setImage(currentImageIndex + dir); }
+
+  // ── Lightbox ──
+  let lbIndex = 0;
+  let isZoomed = false;
+
+  function openLightbox(index) {
+    lbIndex = index;
+    isZoomed = false;
+    const lb = document.getElementById('lightbox');
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    lbRender();
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+    resetZoom();
+  }
+
+  function lbRender() {
+    const img = document.getElementById('lightbox-img');
+    img.src = allImages[lbIndex];
+    document.getElementById('lb-counter').textContent = `${lbIndex + 1} / ${allImages.length}`;
+    document.querySelectorAll('.lb-thumb').forEach((t, i) =>
+      t.classList.toggle('active', i === lbIndex)
+    );
+    const activeThumb = document.querySelectorAll('.lb-thumb')[lbIndex];
+    activeThumb?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    resetZoom();
+  }
+
+  function lbNav(dir) { lbIndex = (lbIndex + dir + allImages.length) % allImages.length; lbRender(); }
+  function lbGoTo(i)  { lbIndex = i; lbRender(); }
+
+  // Zoom toggle on click
+  function toggleZoom(e) {
+    const img = document.getElementById('lightbox-img');
+    if (isZoomed) {
+      resetZoom();
+    } else {
+      isZoomed = true;
+      img.classList.add('zoomed');
+      img.style.transform = 'scale(2.2)';
+      img.style.transformOrigin = `${e.offsetX}px ${e.offsetY}px`;
+      img.style.transition = 'transform 0.2s ease';
     }
+  }
+
+  function resetZoom() {
+    const img = document.getElementById('lightbox-img');
+    isZoomed = false;
+    img.classList.remove('zoomed');
+    img.style.transform = 'scale(1)';
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    const lb = document.getElementById('lightbox');
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape')      closeLightbox();
+    if (e.key === 'ArrowRight')  lbNav(1);
+    if (e.key === 'ArrowLeft')   lbNav(-1);
+  });
+
+  // Close lightbox on backdrop click
+  document.getElementById('lightbox').addEventListener('click', function(e) {
+    if (e.target === this) closeLightbox();
+  });
+
+  // Touch swipe for both gallery and lightbox
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) < 50) return;
+    const lb = document.getElementById('lightbox');
+    if (lb.classList.contains('open')) { diff > 0 ? lbNav(1) : lbNav(-1); }
+    else { diff > 0 ? changeImage(1) : changeImage(-1); }
+  }, { passive: true });
+
+  window.setImage = setImage;
+  window.changeImage = changeImage;
+  window.openLightbox = openLightbox;
+  window.closeLightbox = closeLightbox;
+  window.lbNav = lbNav;
+  window.lbGoTo = lbGoTo;
+  window.toggleZoom = toggleZoom;
+  window.currentImageIndex = 0;
+
+  // Build gallery with all images
+  if (vehicle.images && vehicle.images.length > 0) {
+    buildGallery(vehicle.images, titleText);
+  } else {
+    document.getElementById('vehicle-gallery').innerHTML = `
+      <div style="aspect-ratio:16/9;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--muted)">
+        <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" fill="none" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>`;
   }
 
   // Set specs
