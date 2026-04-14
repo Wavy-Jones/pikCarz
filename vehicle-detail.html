@@ -918,14 +918,31 @@ function displayVehicle(vehicle) {
   // Set location
   document.getElementById('vehicle-location').textContent = vehicle.city ? `${vehicle.city}, ${vehicle.province}` : vehicle.province;
 
-  // Set seller info
-  if (vehicle.seller_name) {
-    document.getElementById('seller-name').textContent = vehicle.seller_name;
-    document.getElementById('seller-avatar').textContent = vehicle.seller_name.charAt(0).toUpperCase();
+  // Set seller info — use custom contact if admin provided one
+  const displayName  = vehicle.contact_name  || vehicle.seller_name || 'Seller';
+  const displayPhone = vehicle.contact_phone || '+27615393801';
+
+  if (displayName) {
+    document.getElementById('seller-name').textContent = displayName;
+    document.getElementById('seller-avatar').textContent = displayName.charAt(0).toUpperCase();
   }
   if (vehicle.seller_type) {
-    document.getElementById('seller-type').textContent = vehicle.seller_type === 'dealer' ? 'Verified Dealer' : 'Private Seller';
+    document.getElementById('seller-type').textContent =
+      vehicle.seller_type === 'dealer' ? 'Verified Dealer' : 'Private Seller';
   }
+
+  // Store phone for contact buttons
+  window._contactPhone = displayPhone;
+  window._contactName  = displayName;
+
+  // Update call button label to show the actual number
+  const phoneLabel = displayPhone.replace('+27', '0').replace(/(d{3})(d{3})(d{4})/, '$1 $2 $3');
+  document.querySelector('.btn-contact-primary').innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+    Call: ${phoneLabel}
+  `;
 }
 
 // Show error
@@ -936,12 +953,14 @@ function showError() {
 
 // Contact seller
 function contactSeller(method) {
+  const phone = (window._contactPhone || '+27615393801').replace(/\s/g, '');
+  const name  = window._contactName || 'the seller';
   if (method === 'call') {
-    window.location.href = 'tel:+27615393801';
+    window.location.href = `tel:${phone}`;
   } else if (method === 'whatsapp') {
     const title = document.getElementById('vehicle-title')?.textContent || 'vehicle';
-    const msg = encodeURIComponent(`Hi, I'm interested in the ${title} listed on pikCarz.`);
-    window.open(`https://wa.me/27615393801?text=${msg}`, '_blank');
+    const msg = encodeURIComponent(`Hi ${name}, I'm interested in the ${title} listed on pikCarz.`);
+    window.open(`https://wa.me/${phone.replace('+','')}?text=${msg}`, '_blank');
   } else if (method === 'email') {
     const title = document.getElementById('vehicle-title')?.textContent || 'vehicle';
     window.location.href = `mailto:info@pikcarz.co.za?subject=Enquiry: ${encodeURIComponent(title)}`;

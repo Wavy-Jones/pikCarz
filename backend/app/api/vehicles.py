@@ -19,6 +19,17 @@ import hashlib
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
 
 
+def _build_response(vehicle, owner) -> VehicleResponse:
+    """Helper: build a VehicleResponse with seller + contact info."""
+    resp = VehicleResponse.model_validate(vehicle)
+    resp.seller_name  = owner.business_name or owner.full_name if owner else "Unknown"
+    resp.seller_type  = owner.role if owner else "individual"
+    resp.is_verified  = owner.is_verified_dealer if owner and owner.role == "dealer" else False
+    resp.contact_name  = vehicle.contact_name  or None
+    resp.contact_phone = vehicle.contact_phone or None
+    return resp
+
+
 @router.post("/upload-signature")
 def get_upload_signature(current_user: User = Depends(get_current_user)):
     """
@@ -68,6 +79,8 @@ def create_vehicle(
         province=vehicle_data.province,
         city=vehicle_data.city,
         images=vehicle_data.images or [],  # Save pre-uploaded Cloudinary URLs
+        contact_name=vehicle_data.contact_name or None,
+        contact_phone=vehicle_data.contact_phone or None,
         status=VehicleStatus.PENDING,
         expires_at=datetime.utcnow() + timedelta(days=30)
     )

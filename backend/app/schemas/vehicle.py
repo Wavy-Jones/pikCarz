@@ -23,6 +23,8 @@ class VehicleBase(BaseModel):
 
 class VehicleCreate(VehicleBase):
     images: Optional[List[str]] = []  # Accept pre-uploaded Cloudinary URLs
+    contact_name:  Optional[str] = None  # Custom seller name (admin use)
+    contact_phone: Optional[str] = None  # Custom seller phone (admin use)
 
 class VehicleUpdate(BaseModel):
     make: Optional[str] = None
@@ -48,10 +50,12 @@ class VehicleResponse(VehicleBase):
     updated_at: Optional[datetime]
     expires_at: Optional[datetime]
     
-    # Seller info
+    # Seller info (from owner account or overridden by admin)
     seller_name: Optional[str] = None
     seller_type: Optional[str] = None
     is_verified: Optional[bool] = None
+    contact_name:  Optional[str] = None
+    contact_phone: Optional[str] = None
     
     class Config:
         from_attributes = True

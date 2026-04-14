@@ -35,6 +35,10 @@ class Vehicle(Base):
     # Images (Cloudinary URLs as JSON array)
     images = Column(JSON, default=list)
     
+    # Custom contact details (set by admin when listing on behalf of a seller)
+    contact_name  = Column(String, nullable=True)
+    contact_phone = Column(String, nullable=True)
+    
     # Location
     province = Column(String, nullable=False)
     city = Column(String, nullable=True)

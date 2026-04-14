@@ -18,6 +18,21 @@ from app.api import auth, vehicles, admin, subscriptions
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Safe migration: add contact columns if they don't already exist
+# (create_all won't add columns to existing tables)
+try:
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        conn.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_name VARCHAR;"
+        ))
+        conn.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_phone VARCHAR;"
+        ))
+        conn.commit()
+except Exception as e:
+    print(f"Migration note: {e}")
+
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
