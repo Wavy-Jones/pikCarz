@@ -16,8 +16,12 @@ from datetime import datetime, timedelta
 router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
 
 # ── Plan definitions ──────────────────────────────────────────────────────────
-# trial_days: how many FREE days a first-time subscriber gets before paying.
-#             0 = no trial.  Premium gets 90 days (3 months), all others 30 days.
+# trial_days: free days a FIRST-TIME subscriber gets.
+#   Premium      → 2 months (60 days)
+#   Dealer Basic → 3 months (90 days)
+#   Dealer Pro   → 3 months (90 days)
+#   Standard     → 1 month  (30 days)
+#   Free         → 0 (no trial; it's already free)
 SUBSCRIPTION_PLANS = {
     "free": {
         "name": "Free Tier",
@@ -50,9 +54,9 @@ SUBSCRIPTION_PLANS = {
         "price": 499,
         "duration_days": 30,
         "max_listings": 15,
-        "trial_days": 90,
+        "trial_days": 60,   # 2 months free
         "features": [
-            "3 months FREE for new subscribers",
+            "2 months FREE for new subscribers",
             "15 active listings",
             "90-day listing duration",
             "Top featured placement",
@@ -67,9 +71,9 @@ SUBSCRIPTION_PLANS = {
         "price": 999,
         "duration_days": 30,
         "max_listings": 50,
-        "trial_days": 30,
+        "trial_days": 90,   # 3 months free
         "features": [
-            "1 month FREE for new subscribers",
+            "3 months FREE for new subscribers",
             "50 active listings",
             "Unlimited listing duration",
             "Verified dealer badge",
@@ -84,9 +88,9 @@ SUBSCRIPTION_PLANS = {
         "price": 1999,
         "duration_days": 30,
         "max_listings": 200,
-        "trial_days": 30,
+        "trial_days": 90,   # 3 months free
         "features": [
-            "1 month FREE for new subscribers",
+            "3 months FREE for new subscribers",
             "200 active listings",
             "Unlimited listing duration",
             "Verified dealer badge",
@@ -98,6 +102,29 @@ SUBSCRIPTION_PLANS = {
         ],
     },
 }
+
+
+def _is_trial_eligible(user: User, db: Session) -> bool:
+    """
+    A user is eligible for a free trial ONLY if ALL of the following are true:
+      1. They have never completed a payment on this account.
+      2. Their current subscription_tier is FREE — meaning they have never
+         previously activated a paid/trial subscription on this account.
+
+    This dual-check prevents trial abuse via:
+      - Creating a new account with the same email (blocked by DB unique constraint).
+      - Re-subscribing after a trial expires without paying (tier stays non-FREE).
+    """
+    has_prior_payment = (
+        db.query(Payment)
+        .filter(Payment.user_id == user.id, Payment.status == PaymentStatus.COMPLETED)
+        .first()
+    ) is not None
+
+    # If the user's tier is not FREE they have already used a trial before
+    tier_is_free = user.subscription_tier == SubscriptionTier.FREE
+
+    return (not has_prior_payment) and tier_is_free
 
 
 @router.get("/plans", response_model=List[SubscriptionPlan])
@@ -124,10 +151,8 @@ async def subscribe_to_plan(
 ):
     """
     Subscribe to a plan.
-    - First-time subscribers receive a free trial (no payment required):
-        Premium  → 3 months (90 days) free
-        Others   → 1 month  (30 days) free
-    - Returning subscribers are redirected to PayFast for payment.
+    - Eligible first-time subscribers receive a free trial (no payment required).
+    - Returning / previously-trialled subscribers go straight to PayFast.
     """
     if tier not in SUBSCRIPTION_PLANS:
         raise HTTPException(status_code=400, detail="Invalid subscription tier")
@@ -145,20 +170,18 @@ async def subscribe_to_plan(
             "expires": current_user.subscription_expires,
         }
 
-    # Check whether this user has ever completed a payment (trial eligibility)
-    has_prior_payment = (
-        db.query(Payment)
-        .filter(Payment.user_id == current_user.id, Payment.status == PaymentStatus.COMPLETED)
-        .first()
-    ) is not None
-
     trial_days = plan.get("trial_days", 0)
-    if not has_prior_payment and trial_days > 0:
+    if trial_days > 0 and _is_trial_eligible(current_user, db):
         # Grant the free trial immediately — no PayFast redirect
         current_user.subscription_tier = SubscriptionTier(tier)
         current_user.subscription_expires = datetime.utcnow() + timedelta(days=trial_days)
         db.commit()
-        trial_label = "3 months" if trial_days == 90 else "1 month"
+        if trial_days == 90:
+            trial_label = "3 months"
+        elif trial_days == 60:
+            trial_label = "2 months"
+        else:
+            trial_label = "1 month"
         return {
             "message": f"🎉 Free trial activated! You have {trial_label} of {plan['name']} at no charge.",
             "tier": tier,
@@ -166,7 +189,7 @@ async def subscribe_to_plan(
             "is_trial": True,
         }
 
-    # Returning subscriber — go through PayFast payment
+    # Returning / previously-trialled subscriber — go through PayFast payment
     payment = Payment(
         user_id=current_user.id,
         amount=plan["price"],

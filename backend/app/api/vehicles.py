@@ -7,7 +7,8 @@ from typing import Optional, List
 from app.database import get_db
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.models import VehicleStatus, VehicleCategory, UserRole
+from app.models.payment import Payment
+from app.models import VehicleStatus, VehicleCategory, UserRole, PaymentStatus
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse, VehicleListResponse
 from app.core.deps import get_current_user
 from app.services.cloudinary import upload_multiple_vehicle_images, delete_vehicle_images
@@ -48,7 +49,7 @@ def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
 @router.get("/public-stats")
 def get_public_stats(db: Session = Depends(get_db)):
     """
-    Public statistics for the About page — no auth required.
+    Public statistics for the homepage and About page — no auth required.
     Returns live counts from the database.
     """
     active_vehicles = db.query(Vehicle).filter(
@@ -61,12 +62,17 @@ def get_public_stats(db: Session = Depends(get_db)):
     ).count()
     total_dealers = db.query(User).filter(User.role == UserRole.DEALER).count()
     total_users = db.query(User).count()
+    # Happy buyers = unique users who have at least one completed payment
+    total_buyers = db.query(Payment.user_id).filter(
+        Payment.status == PaymentStatus.COMPLETED
+    ).distinct().count()
     return {
         "active_listings": active_vehicles,
         "total_listings": total_vehicles_ever,
         "verified_dealers": verified_dealers,
         "total_dealers": total_dealers,
         "total_users": total_users,
+        "total_buyers": total_buyers,
         "provinces_covered": 9,
     }
 
