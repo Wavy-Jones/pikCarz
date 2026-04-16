@@ -39,6 +39,9 @@ class VehicleUpdate(BaseModel):
     description: Optional[str] = None
     province: Optional[str] = None
     city: Optional[str] = None
+    # Admin can update seller contact info via the edit modal
+    contact_name:  Optional[str] = None
+    contact_phone: Optional[str] = None
 
 class VehicleResponse(VehicleBase):
     id: int

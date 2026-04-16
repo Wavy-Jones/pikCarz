@@ -8,66 +8,15 @@
   <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" href="favicon.jpeg" type="image/jpeg" />
   <style>
-    /* Admin-specific styles */
-    .admin-container {
-      max-width: 1400px;
-      margin: 40px auto;
-      padding: 0 24px;
-    }
-    
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 40px;
-    }
-    
-    .admin-header h1 {
-      font-size: 2rem;
-      color: var(--white);
-    }
-    
-    .admin-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      margin-bottom: 40px;
-    }
-    
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-    
-    .stat-card h3 {
-      font-size: 0.85rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
-    }
-    
-    .stat-card .value {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--accent);
-      font-family: 'Barlow Condensed', sans-serif;
-    }
-    
-    .pending-section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-    }
-    
-    .pending-section h2 {
-      margin-bottom: 24px;
-      color: var(--white);
-    }
-    
+    .admin-container { max-width: 1400px; margin: 40px auto; padding: 0 24px; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .admin-header h1 { font-size: 2rem; color: var(--white); }
+    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+    .stat-card h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .stat-card .value { font-size: 2.5rem; font-weight: 800; color: var(--accent); font-family: 'Barlow Condensed', sans-serif; }
+    .admin-section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; margin-bottom: 32px; }
+    .admin-section h2 { margin-bottom: 24px; color: var(--white); }
     .pending-vehicle {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -77,74 +26,44 @@
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 24px;
-      align-items: center;
+      align-items: start;
     }
-    
-    .vehicle-info h4 {
-      font-size: 1.1rem;
-      color: var(--white);
-      margin-bottom: 8px;
-    }
-    
-    .vehicle-info p {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin: 4px 0;
-    }
-    
-    .vehicle-info .price {
-      font-size: 1.2rem;
-      color: var(--accent);
-      font-weight: 700;
-      margin-top: 8px;
-    }
-    
-    .vehicle-actions {
-      display: flex;
-      gap: 12px;
-    }
-    
-    .btn-approve {
-      background: #10b981;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    
-    .btn-approve:hover {
-      background: #059669;
-    }
-    
-    .btn-reject {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    
-    .btn-reject:hover {
-      background: #dc2626;
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-    
-    .empty-state svg {
-      width: 64px;
-      height: 64px;
-      stroke: var(--muted);
-      margin-bottom: 16px;
+    .vehicle-info h4 { font-size: 1.1rem; color: var(--white); margin-bottom: 8px; }
+    .vehicle-info p { color: var(--muted); font-size: 0.9rem; margin: 4px 0; }
+    .vehicle-actions { display: flex; flex-direction: column; gap: 8px; min-width: 120px; }
+    .btn-approve { background: #10b981; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .btn-approve:hover { background: #059669; }
+    .btn-reject  { background: #f59e0b; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .btn-reject:hover  { background: #d97706; }
+    .btn-edit-v  { background: var(--surface); color: var(--white); border: 1px solid var(--border); padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: border-color 0.2s; }
+    .btn-edit-v:hover  { border-color: var(--accent); }
+    .btn-del-v   { background: #ef4444; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state svg { width: 64px; height: 64px; stroke: var(--muted); margin-bottom: 16px; }
+
+    /* ── Subscription table ─── */
+    .sub-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .sub-table th { text-align: left; color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .sub-table td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--white); vertical-align: middle; }
+    .sub-table tr:last-child td { border-bottom: none; }
+    .sub-badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .sub-active   { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid #10b981; }
+    .sub-expired  { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid #374151; }
+    .sub-free     { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid #1d4ed8; }
+
+    /* ── Status colours ─── */
+    .s-active   { color: #10b981; font-weight: 700; text-transform: uppercase; }
+    .s-pending  { color: #f59e0b; font-weight: 700; text-transform: uppercase; }
+    .s-rejected { color: #ef4444; font-weight: 700; text-transform: uppercase; }
+    .s-sold     { color: #3b82f6; font-weight: 700; text-transform: uppercase; }
+    .s-expired  { color: #6b7280; font-weight: 700; text-transform: uppercase; }
+
+    /* ── No-seller warning badge ─── */
+    .no-seller-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4);
+      color: #f59e0b; font-size: 0.75rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 100px;
     }
   </style>
 </head>
@@ -157,16 +76,16 @@
       <img src="Logo.png" alt="pikCarz" class="logo-img" />
       <span class="logo-sub">Powered by Cubeas</span>
     </a>
-    <div style="display: flex; align-items: center; gap: 16px;">
-      <span id="admin-name" style="color: var(--muted);"></span>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <span id="admin-name" style="color:var(--muted);"></span>
       <button onclick="adminLogout()" class="btn-ghost">Logout</button>
     </div>
   </nav>
 </header>
 
 <div class="admin-container">
-  
-  <!-- Stats Overview -->
+
+  <!-- ── Header ─────────────────────────────── -->
   <div class="admin-header">
     <h1>Admin Dashboard</h1>
     <div style="display:flex;gap:12px;flex-wrap:wrap">
@@ -175,163 +94,114 @@
         Add Free Listing
       </button>
       <button onclick="refreshDashboard()" class="btn-primary">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"></polyline>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-        </svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Refresh
       </button>
     </div>
   </div>
-  
+
+  <!-- ── Stats Cards ────────────────────────── -->
   <div class="admin-stats">
-    <div class="stat-card">
-      <h3>Total Users</h3>
-      <div class="value" id="stat-users">0</div>
-    </div>
-    <div class="stat-card">
-      <h3>Total Vehicles</h3>
-      <div class="value" id="stat-vehicles">0</div>
-    </div>
-    <div class="stat-card">
-      <h3>Active Listings</h3>
-      <div class="value" id="stat-active">0</div>
-    </div>
-    <div class="stat-card">
-      <h3>Pending Approval</h3>
-      <div class="value" id="stat-pending">0</div>
-    </div>
-    <div class="stat-card">
-      <h3>Verified Dealers</h3>
-      <div class="value" id="stat-dealers">0</div>
-    </div>
-  </div>
-  
-  <!-- Pending Vehicles Section -->
-  <div class="pending-section">
-    <h2>🚦 Pending Vehicles Awaiting Approval</h2>
-    <div id="pending-vehicles-list">
-      <p style="color: var(--muted);">Loading pending vehicles...</p>
-    </div>
+    <div class="stat-card"><h3>Total Users</h3><div class="value" id="stat-users">0</div></div>
+    <div class="stat-card"><h3>Total Vehicles</h3><div class="value" id="stat-vehicles">0</div></div>
+    <div class="stat-card"><h3>Active Listings</h3><div class="value" id="stat-active">0</div></div>
+    <div class="stat-card"><h3>Pending Approval</h3><div class="value" id="stat-pending">0</div></div>
+    <div class="stat-card"><h3>Verified Dealers</h3><div class="value" id="stat-dealers">0</div></div>
   </div>
 
-  <!-- All Listings Section -->
-  <div class="pending-section" style="margin-top:32px">
+  <!-- ── Pending Vehicles ───────────────────── -->
+  <div class="admin-section">
+    <h2>🚦 Pending Vehicles Awaiting Approval</h2>
+    <div id="pending-vehicles-list"><p style="color:var(--muted)">Loading pending vehicles…</p></div>
+  </div>
+
+  <!-- ── All Listings ───────────────────────── -->
+  <div class="admin-section">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
       <h2>💼 All Listings</h2>
       <button onclick="loadAllListings()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
     </div>
-    <div id="all-listings-list">
-      <p style="color:var(--muted)">Loading all listings…</p>
-    </div>
+    <div id="all-listings-list"><p style="color:var(--muted)">Loading all listings…</p></div>
   </div>
-  
+
+  <!-- ── Subscriptions ──────────────────────── -->
+  <div class="admin-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>💳 User Subscriptions</h2>
+      <button onclick="loadSubscriptions()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
+    </div>
+    <div id="subscriptions-list"><p style="color:var(--muted)">Loading subscriptions…</p></div>
+  </div>
+
 </div>
 
-<!-- ── Admin Free Listing Modal ────────────── -->
+
+<!-- ══════════════════════════════════════════
+     ADMIN FREE LISTING MODAL
+══════════════════════════════════════════ -->
 <div id="admin-listing-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;position:relative;">
-    <button onclick="closeAdminListingModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer;line-height:1;">&times;</button>
-    <h2 style="margin-bottom:6px;color:var(--white);">Add Free Listing</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px;">Admin listing — Dealer Pro access, no charge.</p>
+    <button onclick="closeAdminListingModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer">&times;</button>
+    <h2 style="margin-bottom:6px;color:var(--white)">Add Free Listing</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px">Admin listing — auto-expires in 6 months.</p>
     <form id="admin-create-form" onsubmit="handleAdminCreate(event)">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Make *</label>
-          <select id="al-make" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Make *</label>
+          <select id="al-make" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
             <option value="">Select make…</option>
             <option>Audi</option><option>BMW</option><option>Chery</option><option>Chevrolet</option><option>Citroen</option><option>DFSK</option><option>Ford</option><option>GWM</option><option>Haval</option><option>Honda</option><option>Hyundai</option><option>Isuzu</option><option>Jaguar</option><option>Jeep</option><option>Kia</option><option>Land Rover</option><option>Lexus</option><option>Mahindra</option><option>Mazda</option><option>Mercedes-Benz</option><option>Mitsubishi</option><option>Nissan</option><option>Opel</option><option>Peugeot</option><option>Porsche</option><option>Renault</option><option>Skoda</option><option>Subaru</option><option>Suzuki</option><option>Toyota</option><option>Volkswagen</option><option>Volvo</option><option>Other</option>
-          </select>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Model *</label>
-          <input type="text" id="al-model" placeholder="e.g. Hilux" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-        </div>
+          </select></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Model *</label><input type="text" id="al-model" placeholder="e.g. Hilux" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Year *</label>
-          <select id="al-year" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Year *</label>
+          <select id="al-year" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
             <option value="">Select year…</option>
-            <option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option><option>2010</option><option>2009</option><option>2008</option><option>2007</option><option>2006</option><option>2005</option><option>2004</option><option>2003</option><option>2002</option><option>2001</option><option>2000</option>
-          </select>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Price (R) *</label>
-          <input type="number" id="al-price" min="0" placeholder="350000" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-        </div>
+            <option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option><option>2010</option><option>2009</option><option>2008</option>
+          </select></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Price (R) *</label><input type="number" id="al-price" min="0" placeholder="350000" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Mileage (km) *</label>
-          <input type="number" id="al-mileage" min="0" placeholder="45000" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Category *</label>
-          <select id="al-category" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-            <option value="used_car">Used Car</option><option value="new_car">New Car</option><option value="motorcycle">Motorcycle</option><option value="truck">Truck / Bakkie</option><option value="van">Van</option><option value="other">Other</option>
-          </select>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Mileage (km) *</label><input type="number" id="al-mileage" min="0" placeholder="45000" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Category *</label>
+          <select id="al-category" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+            <option value="used_car">Used Car</option><option value="new_car">New Car</option><option value="motorbike">Motorcycle</option><option value="truck">Truck / Bakkie</option><option value="other">Other</option>
+          </select></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Transmission *</label>
-          <select id="al-transmission" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Transmission *</label>
+          <select id="al-transmission" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
             <option>Automatic</option><option>Manual</option><option>Semi-Automatic</option>
-          </select>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Fuel Type *</label>
-          <select id="al-fuel" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+          </select></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Fuel Type *</label>
+          <select id="al-fuel" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
             <option>Petrol</option><option>Diesel</option><option>Electric</option><option>Hybrid</option>
-          </select>
-        </div>
+          </select></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Colour *</label>
-          <input type="text" id="al-color" placeholder="e.g. White" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Province *</label>
-          <select id="al-province" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Colour *</label><input type="text" id="al-color" placeholder="e.g. White" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Province *</label>
+          <select id="al-province" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
             <option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Free State</option><option>Northern Cape</option>
-          </select>
-        </div>
+          </select></div>
       </div>
-      <div style="margin-bottom:16px">
-        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">City *</label>
-        <input type="text" id="al-city" placeholder="e.g. Johannesburg" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-      </div>
-      <!-- Seller contact override -->
-      <div style="background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.2);border-radius:10px;padding:16px 18px;margin-bottom:16px">
-        <p style="color:var(--accent);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px">👤 Listing on behalf of someone?</p>
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">City *</label><input type="text" id="al-city" placeholder="e.g. Johannesburg" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+
+      <!-- Seller override section — REQUIRED when listing on behalf of someone -->
+      <div style="background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.35);border-radius:10px;padding:16px 18px;margin-bottom:16px">
+        <p style="color:var(--accent);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">👤 Seller Information (Required for on-behalf listings)</p>
+        <p style="color:var(--muted);font-size:0.78rem;margin-bottom:14px">Always fill this in so buyers can contact the actual seller — not pikCarz admin.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div>
-            <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller Name</label>
-            <input type="text" id="al-contact-name" placeholder="e.g. John Dlamini" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-          </div>
-          <div>
-            <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller Phone</label>
-            <input type="tel" id="al-contact-phone" placeholder="e.g. 083 943 8885" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-          </div>
+          <div><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller Name *</label><input type="text" id="al-contact-name" placeholder="e.g. John Dlamini" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid rgba(255,69,69,0.4);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+          <div><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller WhatsApp *</label><input type="tel" id="al-contact-phone" placeholder="e.g. 083 943 8885" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid rgba(255,69,69,0.4);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
         </div>
-        <p style="color:var(--muted);font-size:0.78rem;margin-top:10px">If filled in, buyers will see this name and call/WhatsApp this number instead of the pikCarz default.</p>
+        <p style="color:var(--muted);font-size:0.78rem;margin-top:10px">Buyers will see this name and WhatsApp this number on the listing detail page.</p>
       </div>
-      <div style="margin-bottom:16px">
-        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label>
-        <input type="text" id="al-title" placeholder="e.g. Toyota Bakkie" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-        <p style="font-size:0.8rem;color:var(--muted);margin-top:4px">💡 Include vehicle type (Car, Bakkie, Truck, Motorbike) in the title.</p>
-      </div>
-      <div style="margin-bottom:16px">
-        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description *</label>
-        <textarea id="al-description" rows="4" placeholder="Describe the vehicle — condition, service history, extras, reason for selling…" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea>
-      </div>
-      <div style="margin-bottom:16px">
-        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Photos (max 10)</label>
-        <input type="file" id="al-images" multiple accept="image/*" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;">
-      </div>
-      <div id="admin-create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem;"></div>
+
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label><input type="text" id="al-title" placeholder="e.g. Toyota Bakkie" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"><p style="font-size:0.8rem;color:var(--muted);margin-top:4px">💡 Include vehicle type in the title.</p></div>
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description *</label><textarea id="al-description" rows="4" placeholder="Describe the vehicle — condition, service history, extras, reason for selling…" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea></div>
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Photos (max 10)</label><input type="file" id="al-images" multiple accept="image/*" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+      <div id="admin-create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
       <div style="display:flex;gap:12px;margin-top:8px">
         <button type="button" onclick="closeAdminListingModal()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
         <button type="submit" id="admin-create-btn" class="btn-primary" style="flex:1;padding:12px">Create Listing</button>
@@ -340,259 +210,363 @@
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════
+     EDIT VEHICLE MODAL
+══════════════════════════════════════════ -->
+<div id="edit-vehicle-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;position:relative;">
+    <button onclick="closeEditModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer">&times;</button>
+    <h2 style="margin-bottom:6px;color:var(--white)">Edit Listing</h2>
+    <p id="edit-vehicle-subtitle" style="color:var(--muted);font-size:0.85rem;margin-bottom:24px"></p>
+    <form id="edit-vehicle-form" onsubmit="submitEditVehicle(event)">
+      <input type="hidden" id="edit-vehicle-id" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Price (R) *</label><input type="number" id="ev-price" min="0" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Mileage (km)</label><input type="number" id="ev-mileage" min="0" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+      </div>
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label><input type="text" id="ev-title" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">City</label><input type="text" id="ev-city" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Province *</label>
+          <select id="ev-province" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+            <option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Free State</option><option>Northern Cape</option>
+          </select></div>
+      </div>
+      <!-- Seller contact fields for admin on-behalf listings -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller Name</label><input type="text" id="ev-contact-name" placeholder="e.g. John Dlamini" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+        <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller WhatsApp</label><input type="tel" id="ev-contact-phone" placeholder="e.g. 083 943 8885" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+      </div>
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description</label><textarea id="ev-description" rows="4" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea></div>
+      <div id="edit-vehicle-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button type="button" onclick="closeEditModal()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
+        <button type="submit" id="edit-vehicle-btn" class="btn-primary" style="flex:1;padding:12px">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 <script>
   const API_BASE = 'https://pikcarz.vercel.app';
-  
-  // Check authentication on page load
   const token = localStorage.getItem('auth_token');
   const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
-  
+
   if (!token || userData.role !== 'admin') {
-    // Not authenticated or not admin - redirect to signin
     window.location.href = 'signin.html';
   } else {
-    // Load dashboard
     loadDashboard();
   }
-  
-  // Load dashboard data
+
   async function loadDashboard() {
     document.getElementById('admin-name').textContent = userData.full_name || 'Admin';
-    await Promise.allSettled([
-      loadStats(),
-      loadPendingVehicles(),
-      loadAllListings()
-    ]);
+    await Promise.allSettled([loadStats(), loadPendingVehicles(), loadAllListings(), loadSubscriptions()]);
   }
-  
-  // Load platform statistics
+
+  /* ── Auth header ──────────────────────────── */
+  function authHeaders() {
+    return { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` };
+  }
+
+  /* ── Stats ───────────────────────────────── */
   async function loadStats() {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/stats`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const s = await res.json();
+      document.getElementById('stat-users').textContent    = s.total_users    || 0;
+      document.getElementById('stat-vehicles').textContent = s.total_vehicles  || 0;
+      document.getElementById('stat-active').textContent   = s.active_vehicles || 0;
+      document.getElementById('stat-pending').textContent  = s.pending_vehicles|| 0;
+      document.getElementById('stat-dealers').textContent  = s.verified_dealers|| 0;
+    } catch {
+      ['stat-users','stat-vehicles','stat-active','stat-pending','stat-dealers'].forEach(id => {
+        document.getElementById(id).textContent = '—';
       });
-      
-      if (!response.ok) throw new Error(`${response.status}`);
-      
-      const stats = await response.json();
-      
-      document.getElementById('stat-users').textContent    = stats.total_users    || 0;
-      document.getElementById('stat-vehicles').textContent = stats.total_vehicles  || 0;
-      document.getElementById('stat-active').textContent   = stats.active_vehicles || 0;
-      document.getElementById('stat-pending').textContent  = stats.pending_vehicles|| 0;
-      document.getElementById('stat-dealers').textContent  = stats.verified_dealers|| 0;
-      
-    } catch (error) {
-      console.error('Error loading stats:', error);
-      // Show dashes instead of 0 so admin knows data didn't load
-      ['stat-users','stat-vehicles','stat-active','stat-pending','stat-dealers']
-        .forEach(id => { document.getElementById(id).textContent = '—'; });
     }
   }
-  
-  // Load pending vehicles
+
+  /* ── Pending Vehicles ─────────────────────── */
   async function loadPendingVehicles() {
-    const listDiv = document.getElementById('pending-vehicles-list');
-    listDiv.innerHTML = '<p style="color:var(--muted)">Loading pending vehicles…</p>';
-    
+    const div = document.getElementById('pending-vehicles-list');
+    div.innerHTML = '<p style="color:var(--muted)">Loading pending vehicles…</p>';
     try {
-      const response = await fetch(`${API_BASE}/api/admin/vehicles/pending?per_page=50`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-      });
-      
-      if (!response.ok) throw new Error(`Server returned ${response.status}`);
-      
-      const data = await response.json();
-      const vehicles = data.vehicles || data.items || data || [];
-      
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/pending?per_page=50`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      const vehicles = data.vehicles || [];
       if (!vehicles.length) {
-        listDiv.innerHTML = `
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="stroke:#10b981">
-              <circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>
-            </svg>
-            <h3 style="color:var(--white);margin-bottom:8px">All Clear!</h3>
-            <p>No vehicles waiting for approval right now.</p>
-          </div>`;
+        div.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg><h3 style="color:var(--white);margin-bottom:8px">All Clear!</h3><p>No vehicles waiting for approval.</p></div>`;
         return;
       }
-      listDiv.innerHTML = vehicles.map(vehicle => `
-        <div class="pending-vehicle" id="vehicle-${vehicle.id}">
-          <div class="vehicle-info">
-            <h4>${vehicle.year} ${vehicle.make} ${vehicle.model}</h4>
-            <p><strong>Title:</strong> ${vehicle.title || 'N/A'}</p>
-            <p><strong>Seller:</strong> ${vehicle.seller_name || 'Unknown'} (${vehicle.seller_type || 'individual'})</p>
-            <p><strong>Location:</strong> ${vehicle.city || ''}, ${vehicle.province || ''}</p>
-            <p><strong>Mileage:</strong> ${(vehicle.mileage || 0).toLocaleString()} km | <strong>Transmission:</strong> ${vehicle.transmission || 'N/A'}</p>
-            ${vehicle.images && vehicle.images.length > 0
-              ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-                  ${vehicle.images.slice(0,4).map(img => `<img src="${img}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />`).join('')}
-                  ${vehicle.images.length > 4 ? `<div style="width:80px;height:60px;border-radius:6px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);font-size:0.85rem">+${vehicle.images.length - 4} more</div>` : ''}
-                </div>`
-              : '<p style="color:var(--muted);font-size:0.82rem;margin-top:6px">&#128247; No photos uploaded</p>'}
-            <p class="price" style="margin-top:10px">R ${Number(vehicle.price).toLocaleString('en-ZA')}</p>
-          </div>
-          <div class="vehicle-actions">
-            <button class="btn-approve" onclick="approveVehicle(${vehicle.id})">&#10003; Approve</button>
-            <button class="btn-reject"  onclick="rejectVehicle(${vehicle.id})">&#10007; Reject</button>
-          </div>
-        </div>
-      `).join('');
-      
-    } catch (error) {
-      console.error('Error loading pending vehicles:', error);
-      listDiv.innerHTML = `
-        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:28px;text-align:center">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width:40px;height:40px;margin-bottom:12px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <p style="color:#ef4444;font-weight:600;margin-bottom:6px">Could not load pending vehicles</p>
-          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px">This may be a temporary network or API issue. Check your connection or try again.</p>
-          <button onclick="loadPendingVehicles()" class="btn-primary" style="font-size:0.85rem;padding:10px 20px">🔄 Retry</button>
-        </div>
-      `;
+      div.innerHTML = vehicles.map(v => vehicleCard(v, 'pending')).join('');
+    } catch (err) {
+      div.innerHTML = `<p style="color:#ef4444;padding:16px">Could not load pending vehicles: ${err.message} <button onclick="loadPendingVehicles()" class="btn-primary" style="margin-left:8px;padding:6px 14px">Retry</button></p>`;
     }
   }
-  
-  // Approve vehicle
+
+  /* ── All Listings ─────────────────────────── */
+  async function loadAllListings() {
+    const div = document.getElementById('all-listings-list');
+    div.innerHTML = '<p style="color:var(--muted);padding:16px">Loading…</p>';
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/all?per_page=100`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      const vehicles = data.vehicles || [];
+      if (!vehicles.length) { div.innerHTML = '<p style="color:var(--muted);padding:16px">No listings yet.</p>'; return; }
+      div.innerHTML = vehicles.map(v => vehicleCard(v, 'all')).join('');
+    } catch (err) {
+      div.innerHTML = `<p style="color:#ef4444;padding:16px">Could not load listings: ${err.message} <button onclick="loadAllListings()" class="btn-primary" style="margin-left:8px;padding:6px 14px">Retry</button></p>`;
+    }
+  }
+
+  /* ── Subscriptions ────────────────────────── */
+  async function loadSubscriptions() {
+    const div = document.getElementById('subscriptions-list');
+    div.innerHTML = '<p style="color:var(--muted);padding:16px">Loading subscriptions…</p>';
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/subscriptions?per_page=100`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      const users = data.users || [];
+      if (!users.length) { div.innerHTML = '<p style="color:var(--muted);padding:16px">No registered users yet.</p>'; return; }
+
+      div.innerHTML = `
+        <div style="overflow-x:auto">
+          <table class="sub-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Expires</th>
+                <th>Listings</th>
+                <th>Last Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${users.map(u => {
+                const tier = (u.subscription_tier || 'free').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+                const statusBadge = u.is_active
+                  ? `<span class="sub-badge sub-active">Active</span>`
+                  : u.subscription_tier === 'free'
+                    ? `<span class="sub-badge sub-free">Free</span>`
+                    : `<span class="sub-badge sub-expired">Expired</span>`;
+                const expires = u.subscription_expires
+                  ? new Date(u.subscription_expires).toLocaleDateString('en-ZA')
+                  : '—';
+                const lastPay = u.last_payment_date
+                  ? `R${u.last_payment_amount?.toLocaleString('en-ZA')} on ${new Date(u.last_payment_date).toLocaleDateString('en-ZA')}`
+                  : '—';
+                return `<tr>
+                  <td>${u.full_name || '—'}</td>
+                  <td style="color:var(--muted)">${u.email}</td>
+                  <td>${u.role || '—'}</td>
+                  <td>${tier}</td>
+                  <td>${statusBadge}</td>
+                  <td style="color:var(--muted);font-size:0.82rem">${expires}</td>
+                  <td style="text-align:center">${u.vehicle_count ?? 0}</td>
+                  <td style="color:var(--muted);font-size:0.82rem">${lastPay}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch (err) {
+      div.innerHTML = `<p style="color:#ef4444;padding:16px">Could not load subscriptions: ${err.message} <button onclick="loadSubscriptions()" class="btn-primary" style="margin-left:8px;padding:6px 14px">Retry</button></p>`;
+    }
+  }
+
+  /* ── Vehicle card builder ─────────────────── */
+  const statusColour = { active: '#10b981', pending: '#f59e0b', rejected: '#ef4444', expired: '#6b7280', sold: '#3b82f6' };
+
+  function vehicleCard(v, context) {
+    const isPending = v.status === 'pending';
+
+    // FIXED: Always show contact_name as the seller.
+    // If admin created the listing without adding contact info, show a clear warning
+    // so it's immediately obvious that the listing needs to be edited before approval.
+    let sellerDisplay;
+    if (v.contact_name) {
+      sellerDisplay = `<strong style="color:var(--white)">${v.contact_name}</strong>`;
+    } else {
+      sellerDisplay = `<span class="no-seller-badge">⚠️ No seller assigned — use Edit to add contact info</span>`;
+    }
+
+    // Use WhatsApp link for contact phone (not tel:)
+    const phoneLink = v.contact_phone
+      ? ` — <a href="https://wa.me/${v.contact_phone.replace(/\D/g,'')}" target="_blank" rel="noopener" style="color:#25D366;font-weight:600">📱 ${v.contact_phone}</a>`
+      : '';
+
+    const expiryNote = v.expires_at
+      ? `<p style="font-size:0.78rem;color:var(--muted)">⏰ Expires: ${new Date(v.expires_at).toLocaleDateString('en-ZA')}</p>`
+      : '';
+
+    const images = v.images && v.images.length > 0
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${v.images.slice(0,3).map(img => `<img src="${img}" style="width:72px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />`).join('')}${v.images.length > 3 ? `<div style="width:72px;height:54px;border-radius:6px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);font-size:0.82rem">+${v.images.length - 3}</div>` : ''}</div>`
+      : '<p style="color:var(--muted);font-size:0.82rem;margin-top:6px">📷 No photos</p>';
+
+    // FIXED: Edit comes FIRST so admin can review/correct before approving.
+    // This is especially important for pending admin-created listings.
+    const actions = `
+      <div class="vehicle-actions">
+        <button class="btn-edit-v" onclick="openEditModal(${v.id}, '${(v.title||'').replace(/'/g,"\\'")}', ${v.price}, ${v.mileage||0}, '${(v.city||'').replace(/'/g,"\\'")}', '${v.province||'Gauteng'}', '${(v.description||'').replace(/'/g,"\\'").replace(/\n/g,' ')}', '${(v.contact_name||'').replace(/'/g,"\\'")}', '${(v.contact_phone||'').replace(/'/g,"\\'")}')">✎ Edit</button>
+        ${isPending ? `<button class="btn-approve" onclick="approveVehicle(${v.id})">✓ Approve</button>` : ''}
+        ${isPending ? `<button class="btn-reject"  onclick="rejectVehicle(${v.id})">✗ Reject</button>`  : ''}
+        <button class="btn-del-v"  onclick="adminDeleteVehicle(${v.id})">🗑 Delete</button>
+      </div>`;
+
+    return `
+      <div class="pending-vehicle" id="${context === 'pending' ? 'vehicle' : 'all-vehicle'}-${v.id}">
+        <div class="vehicle-info">
+          <h4>${v.year} ${v.make} ${v.model}</h4>
+          <p><strong>Title:</strong> ${v.title || 'N/A'}</p>
+          <p><strong>Seller:</strong> ${sellerDisplay}${phoneLink}&nbsp;|&nbsp;<strong>Location:</strong> ${v.city || ''}, ${v.province || ''}</p>
+          <p><strong>Price:</strong> <span style="color:var(--accent);font-weight:700">R ${Number(v.price).toLocaleString('en-ZA')}</span>&nbsp;|&nbsp;<strong>Status:</strong> <span style="color:${statusColour[v.status]||'#fff'};font-weight:700;text-transform:uppercase">${v.status}</span></p>
+          ${expiryNote}
+          ${images}
+        </div>
+        ${actions}
+      </div>`;
+  }
+
+  /* ── Approve / Reject ─────────────────────── */
   async function approveVehicle(vehicleId) {
     if (!confirm('Approve this vehicle listing?')) return;
-    
     try {
-      const response = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/approve`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/approve`, {
+        method: 'PUT', headers: authHeaders()
       });
-      
-      if (!response.ok) throw new Error('Failed to approve vehicle');
-      
-      document.getElementById(`vehicle-${vehicleId}`).remove();
-      await loadStats();
-      
-      const remaining = document.querySelectorAll('.pending-vehicle').length;
-      if (remaining === 0) {
-        document.getElementById('pending-vehicles-list').innerHTML = `
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9 11l3 3L22 4"></path>
-            </svg>
-            <h3 style="color: var(--white); margin-bottom: 8px;">All Done!</h3>
-            <p>No more pending vehicles to review.</p>
-          </div>
-        `;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
       }
-      
+      document.getElementById(`vehicle-${vehicleId}`)?.remove();
+      document.getElementById(`all-vehicle-${vehicleId}`)?.remove();
+      await Promise.allSettled([loadStats(), loadAllListings()]);
+      const remaining = document.querySelectorAll('[id^="vehicle-"]').length;
+      if (remaining === 0) {
+        document.getElementById('pending-vehicles-list').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 11l3 3L22 4"/></svg><h3 style="color:var(--white);margin-bottom:8px">All Done!</h3><p>No more pending vehicles.</p></div>`;
+      }
       alert('✅ Vehicle approved successfully!');
-      
-    } catch (error) {
-      alert('Error approving vehicle: ' + error.message);
+    } catch (err) {
+      alert('Error approving vehicle: ' + err.message);
     }
   }
-  
-  // Reject vehicle
+
   async function rejectVehicle(vehicleId) {
-    if (!confirm('Reject this vehicle listing? This action cannot be undone.')) return;
-    
+    if (!confirm('Reject this vehicle listing?')) return;
     try {
-      const response = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/reject`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/reject`, {
+        method: 'PUT', headers: authHeaders()
       });
-      
-      if (!response.ok) throw new Error('Failed to reject vehicle');
-      
-      document.getElementById(`vehicle-${vehicleId}`).remove();
-      await loadStats();
-      
-      const remaining = document.querySelectorAll('.pending-vehicle').length;
-      if (remaining === 0) {
-        document.getElementById('pending-vehicles-list').innerHTML = `
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9 11l3 3L22 4"></path>
-            </svg>
-            <h3 style="color: var(--white); margin-bottom: 8px;">All Done!</h3>
-            <p>No more pending vehicles to review.</p>
-          </div>
-        `;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
       }
-      
-      alert('✅ Vehicle rejected successfully!');
-      
-    } catch (error) {
-      alert('Error rejecting vehicle: ' + error.message);
+      document.getElementById(`vehicle-${vehicleId}`)?.remove();
+      document.getElementById(`all-vehicle-${vehicleId}`)?.remove();
+      await Promise.allSettled([loadStats(), loadAllListings()]);
+      alert('Vehicle rejected.');
+    } catch (err) {
+      alert('Error rejecting vehicle: ' + err.message);
     }
   }
-  
-  // Refresh dashboard
+
+  /* ── Delete ───────────────────────────────── */
+  async function adminDeleteVehicle(vehicleId) {
+    if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}`, {
+        method: 'DELETE', headers: authHeaders()
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      document.getElementById(`vehicle-${vehicleId}`)?.remove();
+      document.getElementById(`all-vehicle-${vehicleId}`)?.remove();
+      await loadStats();
+      alert('✅ Listing deleted.');
+    } catch (err) {
+      alert('Could not delete: ' + err.message);
+    }
+  }
+
+  /* ── Edit Modal ───────────────────────────── */
+  // Now accepts contact_name + contact_phone so admin can fix seller info from the card
+  function openEditModal(id, title, price, mileage, city, province, description, contactName, contactPhone) {
+    document.getElementById('edit-vehicle-id').value = id;
+    document.getElementById('edit-vehicle-subtitle').textContent = `Editing listing #${id}`;
+    document.getElementById('ev-title').value = title;
+    document.getElementById('ev-price').value = price;
+    document.getElementById('ev-mileage').value = mileage;
+    document.getElementById('ev-city').value = city;
+    document.getElementById('ev-description').value = description;
+    document.getElementById('ev-contact-name').value  = contactName  || '';
+    document.getElementById('ev-contact-phone').value = contactPhone || '';
+    // Set province dropdown
+    const prov = document.getElementById('ev-province');
+    for (let i = 0; i < prov.options.length; i++) {
+      if (prov.options[i].value === province) { prov.selectedIndex = i; break; }
+    }
+    document.getElementById('edit-vehicle-error').style.display = 'none';
+    document.getElementById('edit-vehicle-modal').style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-vehicle-modal').style.display = 'none';
+  }
+
+  async function submitEditVehicle(e) {
+    e.preventDefault();
+    const errDiv = document.getElementById('edit-vehicle-error');
+    const btn    = document.getElementById('edit-vehicle-btn');
+    const id     = document.getElementById('edit-vehicle-id').value;
+    errDiv.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const payload = {
+      title:         document.getElementById('ev-title').value,
+      price:         parseFloat(document.getElementById('ev-price').value),
+      mileage:       parseInt(document.getElementById('ev-mileage').value) || null,
+      city:          document.getElementById('ev-city').value,
+      province:      document.getElementById('ev-province').value,
+      description:   document.getElementById('ev-description').value,
+      contact_name:  document.getElementById('ev-contact-name').value.trim()  || null,
+      contact_phone: document.getElementById('ev-contact-phone').value.trim() || null,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/${id}/edit`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
+      }
+      closeEditModal();
+      alert('✅ Listing updated!');
+      await Promise.allSettled([loadPendingVehicles(), loadAllListings()]);
+    } catch (err) {
+      errDiv.textContent = err.message;
+      errDiv.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save Changes';
+    }
+  }
+
+  /* ── Refresh ──────────────────────────────── */
   async function refreshDashboard() {
     await loadDashboard();
     alert('✅ Dashboard refreshed!');
   }
 
-  // Load ALL listings (for admin management)
-  async function loadAllListings() {
-    const listDiv = document.getElementById('all-listings-list');
-    listDiv.innerHTML = '<p style="color:var(--muted);padding:20px">Loading…</p>';
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/vehicles/all?per_page=50`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-      });
-      if (!response.ok) throw new Error(`${response.status}`);
-      const data = await response.json();
-      const vehicles = data.vehicles || [];
-      if (!vehicles.length) {
-        listDiv.innerHTML = '<p style="color:var(--muted);padding:20px">No listings yet.</p>';
-        return;
-      }
-      const statusColour = { active: '#10b981', pending: '#f59e0b', rejected: '#ef4444', expired: '#6b7280', sold: '#3b82f6' };
-      listDiv.innerHTML = vehicles.map(v => `
-        <div class="pending-vehicle" id="all-vehicle-${v.id}">
-          <div class="vehicle-info">
-            <h4>${v.year} ${v.make} ${v.model}</h4>
-            <p><strong>Title:</strong> ${v.title || 'N/A'}</p>
-            <p><strong>Seller:</strong> ${v.seller_name || 'Unknown'} &nbsp;|
-               <strong>Location:</strong> ${v.city || ''}, ${v.province || ''}</p>
-            <p><strong>Price:</strong> <span style="color:var(--accent);font-weight:700">R ${Number(v.price).toLocaleString('en-ZA')}</span>
-               &nbsp;|&nbsp;
-               <strong>Status:</strong> <span style="color:${statusColour[v.status]||'#fff'};font-weight:700;text-transform:uppercase">${v.status}</span>
-            </p>
-            ${v.images && v.images.length > 0
-              ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${v.images.slice(0,3).map(img => `<img src="${img}" style="width:70px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />`).join('')}</div>`
-              : ''}
-          </div>
-          <div class="vehicle-actions" style="flex-direction:column">
-            ${v.status === 'pending'
-              ? `<button class="btn-approve" onclick="approveVehicle(${v.id})" style="margin-bottom:8px">✓ Approve</button>
-                 <button class="btn-reject"  onclick="rejectVehicle(${v.id})"  style="margin-bottom:8px">✗ Reject</button>`
-              : ''}
-            <button onclick="adminDeleteVehicle(${v.id})" style="background:#ef4444;color:#fff;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">🗑 Delete</button>
-          </div>
-        </div>`).join('');
-    } catch(err) {
-      listDiv.innerHTML = `<p style="color:#ef4444;padding:20px">Could not load listings: ${err.message} &nbsp; <button onclick="loadAllListings()" class="btn-primary" style="padding:8px 16px">🔄 Retry</button></p>`;
-    }
-  }
-
-  async function adminDeleteVehicle(vehicleId) {
-    if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-      });
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
-      // Remove from both sections if visible
-      document.getElementById(`all-vehicle-${vehicleId}`)?.remove();
-      document.getElementById(`vehicle-${vehicleId}`)?.remove();
-      await loadStats();
-      alert('✅ Listing deleted.');
-    } catch(err) {
-      alert('Could not delete: ' + err.message);
-    }
-  }
-  
-  // Logout
+  /* ── Logout ───────────────────────────────── */
   function adminLogout() {
     if (confirm('Logout from admin dashboard?')) {
       localStorage.removeItem('auth_token');
@@ -601,10 +575,10 @@
     }
   }
 
-  /* ── Admin Free Listing Modal ─────────────────── */
-  function openAdminListingModal() {
-    document.getElementById('admin-listing-modal').style.display = 'flex';
-  }
+  /* ══════════════════════════════════════════
+     ADD FREE LISTING (admin on behalf)
+  ══════════════════════════════════════════ */
+  function openAdminListingModal()  { document.getElementById('admin-listing-modal').style.display = 'flex'; }
   function closeAdminListingModal() {
     document.getElementById('admin-listing-modal').style.display = 'none';
     document.getElementById('admin-create-form').reset();
@@ -616,62 +590,52 @@
     const errDiv = document.getElementById('admin-create-error');
     const btn    = document.getElementById('admin-create-btn');
     errDiv.style.display = 'none';
-    btn.disabled = true;
-    btn.textContent = 'Creating…';
+    btn.disabled = true; btn.textContent = 'Creating…';
 
-    // Always read the token fresh — not the stale page-load copy
     const freshToken = localStorage.getItem('auth_token');
     if (!freshToken) {
       errDiv.textContent = 'Session expired — please log in again.';
       errDiv.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Create Listing';
+      btn.disabled = false; btn.textContent = 'Create Listing';
       return;
     }
-
-    // Client-side JWT expiry check — saves a round-trip if token is already expired
     try {
-      const payloadB64 = freshToken.split('.')[1];
-      const decoded = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+      const decoded = JSON.parse(atob(freshToken.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
       if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        window.location.href = 'signin.html?session=expired';
-        return;
+        localStorage.removeItem('auth_token'); localStorage.removeItem('user_data');
+        window.location.href = 'signin.html?session=expired'; return;
       }
-    } catch (_) { /* malformed token — let the server reject it */ }
+    } catch (_) {}
 
     const payload = {
-      make:         document.getElementById('al-make').value,
-      model:        document.getElementById('al-model').value,
-      year:         parseInt(document.getElementById('al-year').value),
-      price:        parseFloat(document.getElementById('al-price').value),
-      mileage:      parseInt(document.getElementById('al-mileage').value),
-      category:     document.getElementById('al-category').value,
-      transmission: document.getElementById('al-transmission').value,
-      fuel_type:    document.getElementById('al-fuel').value,
-      color:        document.getElementById('al-color').value,
-      province:     document.getElementById('al-province').value,
-      city:         document.getElementById('al-city').value,
-      title:        document.getElementById('al-title').value,
-      description:  document.getElementById('al-description').value,
-      images:       [],
+      make:          document.getElementById('al-make').value,
+      model:         document.getElementById('al-model').value,
+      year:          parseInt(document.getElementById('al-year').value),
+      price:         parseFloat(document.getElementById('al-price').value),
+      mileage:       parseInt(document.getElementById('al-mileage').value),
+      category:      document.getElementById('al-category').value,
+      transmission:  document.getElementById('al-transmission').value,
+      fuel_type:     document.getElementById('al-fuel').value,
+      color:         document.getElementById('al-color').value,
+      province:      document.getElementById('al-province').value,
+      city:          document.getElementById('al-city').value,
+      title:         document.getElementById('al-title').value,
+      description:   document.getElementById('al-description').value,
+      images:        [],
       contact_name:  document.getElementById('al-contact-name').value.trim() || null,
       contact_phone: document.getElementById('al-contact-phone').value.trim() || null,
     };
 
-    // Helper: fetch with timeout + retry for Vercel cold starts
-    async function fetchWithRetry(url, options, timeoutMs = 20000) {
+    async function fetchWithRetry(url, options, ms = 20000) {
       for (let attempt = 1; attempt <= 2; attempt++) {
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), timeoutMs);
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), ms);
         try {
-          const res = await fetch(url, { ...options, signal: controller.signal });
-          clearTimeout(tid);
-          return res;
+          const r = await fetch(url, { ...options, signal: ctrl.signal });
+          clearTimeout(tid); return r;
         } catch (err) {
           clearTimeout(tid);
-          if (attempt === 2) throw new Error('Request timed out — please try again.');
+          if (attempt === 2) throw new Error('timeout');
           btn.textContent = 'Retrying…';
           await new Promise(r => setTimeout(r, 2000));
           btn.textContent = 'Creating…';
@@ -679,48 +643,45 @@
       }
     }
 
+    // Track whether the listing was successfully created so we don't
+    // show a false error if only the dashboard refresh times out.
+    let listingCreated = false;
+
     try {
-      // Step 1: Upload images DIRECTLY to Cloudinary from the browser
+      // Step 1: Upload images to Cloudinary
       const imgInput = document.getElementById('al-images');
       if (imgInput.files.length > 0) {
-      btn.textContent = `Uploading photo 1 of ${imgInput.files.length}…`;
+        btn.textContent = `Uploading photo 1 of ${imgInput.files.length}…`;
+        const sigRes = await fetchWithRetry(`${API_BASE}/api/vehicles/upload-signature`, { method:'POST', headers: authHeaders() });
+        if (!sigRes.ok) throw new Error('Could not get upload credentials. Try again.');
+        const sig = await sigRes.json();
 
-      // Get signed upload credentials from backend
-      const sigRes = await fetchWithRetry(`${API_BASE}/api/vehicles/upload-signature`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${freshToken}` }
-      });
-      if (!sigRes.ok) throw new Error('Could not get upload credentials. Try again.');
-      const sig = await sigRes.json();
-
-      // Compress image client-side (reduces large mobile photos significantly)
-      function compressImage(file) {
-      return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const MAX = 1200;
-        let { width, height } = img;
-        if (width > MAX || height > MAX) {
-        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
-        else { width = Math.round(width * MAX / height); height = MAX; }
-        }
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          canvas.toBlob(blob => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.82);
+        function compressImage(file) {
+          return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+              URL.revokeObjectURL(url);
+              const MAX = 1200;
+              let { width, height } = img;
+              if (width > MAX || height > MAX) {
+                if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                else { width = Math.round(width * MAX / height); height = MAX; }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width; canvas.height = height;
+              canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+              canvas.toBlob(blob => resolve(new File([blob], file.name, { type:'image/jpeg' })), 'image/jpeg', 0.82);
             };
-        img.onerror = () => resolve(file);
-        img.src = url;
-        });
+            img.onerror = () => resolve(file);
+            img.src = url;
+          });
         }
 
-        // Upload one-by-one for reliability on mobile
         const imageUrls = [];
         const files = Array.from(imgInput.files);
         for (let i = 0; i < files.length; i++) {
-          btn.textContent = `Uploading photo ${i + 1} of ${files.length}…`;
+          btn.textContent = `Uploading photo ${i+1} of ${files.length}…`;
           const compressed = await compressImage(files[i]);
           const fd = new FormData();
           fd.append('file',      compressed);
@@ -728,57 +689,55 @@
           fd.append('timestamp', sig.timestamp);
           fd.append('signature', sig.signature);
           fd.append('folder',    sig.folder);
-          const res = await fetch(
-            `https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`,
-            { method: 'POST', body: fd }
-          );
-          const data = await res.json();
-          if (data.error) throw new Error(`Photo ${i+1} failed: ${data.error.message}`);
-          imageUrls.push(data.secure_url);
+          const r = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method:'POST', body:fd });
+          const d = await r.json();
+          if (d.error) throw new Error(`Photo ${i+1} failed: ${d.error.message}`);
+          imageUrls.push(d.secure_url);
         }
         payload.images = imageUrls;
         btn.textContent = 'Creating listing…';
       }
 
-      // Step 2: Create the vehicle with images already in payload
+      // Step 2: Create vehicle
       const res = await fetchWithRetry(`${API_BASE}/api/vehicles`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${freshToken}` },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        if (res.status === 401) {
-          // Token is invalid/expired — clear session and redirect to login
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          window.location.href = 'signin.html?session=expired';
-          return;
-        }
-        if (res.status === 422) throw new Error('Some fields are invalid. Please check all fields and try again.');
+        if (res.status === 401) { localStorage.removeItem('auth_token'); localStorage.removeItem('user_data'); window.location.href = 'signin.html?session=expired'; return; }
+        if (res.status === 422) throw new Error('Some fields are invalid. Check all fields and try again.');
         throw new Error(err.detail || `Server error ${res.status}`);
       }
 
-      const vehicle = await res.json();
-
+      // Mark success BEFORE closing modal so catch block knows not to show error
+      listingCreated = true;
       closeAdminListingModal();
-      alert('✅ Listing created! It is now pending approval (you can approve it below).');
-      await loadDashboard();
+      alert('✅ Listing created! It is now pending approval.');
 
     } catch (err) {
-      errDiv.textContent = err.message || 'Failed to create listing. Please try again.';
+      if (listingCreated) return; // Success path — don't show error
+      const isTimeout = err.message === 'timeout';
+      errDiv.textContent = isTimeout
+        ? '⚠️ Request timed out. Your listing may still have been created — scroll down to check the listings table before trying again.'
+        : (err.message || 'Failed to create listing. Please try again.');
       errDiv.style.display = 'block';
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Create Listing';
+      btn.disabled = false; btn.textContent = 'Create Listing';
+    }
+
+    // Reload dashboard outside the try-catch so a refresh failure
+    // never incorrectly shows the listing-creation error.
+    if (listingCreated) {
+      try { await loadDashboard(); } catch (_) {}
     }
   }
 
-  // Close modal on backdrop click
-  document.getElementById('admin-listing-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeAdminListingModal();
-  });
+  // Close modals on backdrop click
+  document.getElementById('admin-listing-modal').addEventListener('click', function(e) { if (e.target === this) closeAdminListingModal(); });
+  document.getElementById('edit-vehicle-modal').addEventListener('click',  function(e) { if (e.target === this) closeEditModal(); });
 </script>
 
 </body>
