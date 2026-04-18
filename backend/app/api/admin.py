@@ -3,7 +3,7 @@ Admin API routes - Approve/reject vehicles, manage users & subscriptions
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from app.database import get_db
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -16,7 +16,7 @@ from datetime import datetime
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
     """Use contact_name when the admin listed on behalf of someone."""
@@ -57,7 +57,7 @@ def _purge_expired_admin_listings(db: Session):
         db.commit()
 
 
-# ── Stats ─────────────────────────────────────────────────────────────────────
+# Stats
 
 @router.get("/stats")
 def get_admin_stats(
@@ -74,7 +74,10 @@ def get_admin_stats(
     }
 
 
-# ── Subscriptions Overview ────────────────────────────────────────────────────
+# Subscriptions Overview
+# FIXED: replaced N+1 queries (1 payment query + 1 vehicle count per user) with
+# 3 subqueries joined in a single round-trip. This prevents Vercel's 10-second
+# serverless timeout from causing "Failed to fetch" on the admin dashboard.
 
 @router.get("/subscriptions")
 def admin_get_subscriptions(
@@ -83,40 +86,88 @@ def admin_get_subscriptions(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Admin: view all users and their subscription status."""
-    query = db.query(User).filter(User.role != UserRole.ADMIN)
-    total = query.count()
-    offset = (page - 1) * per_page
-    users = query.order_by(User.created_at.desc()).offset(offset).limit(per_page).all()
-
+    """
+    Admin: view all users and their subscription status.
+    Uses aggregated subqueries instead of N+1 queries to avoid Vercel timeouts.
+    """
     now = datetime.utcnow()
-    results = []
-    for u in users:
-        # Latest completed payment
-        last_payment = (
-            db.query(Payment)
-            .filter(Payment.user_id == u.id, Payment.status == PaymentStatus.COMPLETED)
-            .order_by(Payment.created_at.desc())
-            .first()
+
+    # Subquery 1: most recent completed-payment date per user
+    last_pay_date_sq = (
+        db.query(
+            Payment.user_id,
+            func.max(Payment.created_at).label("last_date"),
         )
+        .filter(Payment.status == PaymentStatus.COMPLETED)
+        .group_by(Payment.user_id)
+        .subquery()
+    )
+
+    # Subquery 2: join back to get the amount for that date
+    last_pay_sq = (
+        db.query(
+            Payment.user_id,
+            Payment.amount.label("last_payment_amount"),
+            Payment.created_at.label("last_payment_date"),
+        )
+        .join(
+            last_pay_date_sq,
+            (Payment.user_id == last_pay_date_sq.c.user_id)
+            & (Payment.created_at == last_pay_date_sq.c.last_date)
+            & (Payment.status == PaymentStatus.COMPLETED),
+        )
+        .subquery()
+    )
+
+    # Subquery 3: vehicle count per owner
+    vcount_sq = (
+        db.query(
+            Vehicle.owner_id,
+            func.count(Vehicle.id).label("vehicle_count"),
+        )
+        .group_by(Vehicle.owner_id)
+        .subquery()
+    )
+
+    # Main query: all non-admin users + left-join aggregates in one DB round-trip
+    total = db.query(User).filter(User.role != UserRole.ADMIN).count()
+    offset = (page - 1) * per_page
+    rows = (
+        db.query(
+            User,
+            last_pay_sq.c.last_payment_amount,
+            last_pay_sq.c.last_payment_date,
+            func.coalesce(vcount_sq.c.vehicle_count, 0).label("vehicle_count"),
+        )
+        .filter(User.role != UserRole.ADMIN)
+        .outerjoin(last_pay_sq, User.id == last_pay_sq.c.user_id)
+        .outerjoin(vcount_sq, User.id == vcount_sq.c.owner_id)
+        .order_by(User.created_at.desc())
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
+
+    results = []
+    for u, last_pay_amount, last_pay_date, v_count in rows:
         is_active = bool(u.subscription_expires and u.subscription_expires > now)
         results.append({
-            "id":                  u.id,
-            "full_name":           u.full_name,
-            "email":               u.email,
-            "role":                u.role,
-            "subscription_tier":   u.subscription_tier,
+            "id":                   u.id,
+            "full_name":            u.full_name,
+            "email":                u.email,
+            "role":                 u.role,
+            "subscription_tier":    u.subscription_tier,
             "subscription_expires": u.subscription_expires.isoformat() if u.subscription_expires else None,
-            "is_active":           is_active,
-            "last_payment_amount": float(last_payment.amount) if last_payment else None,
-            "last_payment_date":   last_payment.created_at.isoformat() if last_payment else None,
-            "vehicle_count":       db.query(Vehicle).filter(Vehicle.owner_id == u.id).count(),
+            "is_active":            is_active,
+            "last_payment_amount":  float(last_pay_amount) if last_pay_amount is not None else None,
+            "last_payment_date":    last_pay_date.isoformat() if last_pay_date else None,
+            "vehicle_count":        int(v_count),
         })
 
     return {"total": total, "page": page, "per_page": per_page, "users": results}
 
 
-# ── Vehicles: All Listings ────────────────────────────────────────────────────
+# Vehicles: All Listings
 
 @router.get("/vehicles/all")
 def admin_list_all_vehicles(
@@ -149,7 +200,7 @@ def admin_list_all_vehicles(
     )
 
 
-# ── Vehicles: Pending ─────────────────────────────────────────────────────────
+# Vehicles: Pending
 
 @router.get("/vehicles/pending", response_model=VehicleListResponse)
 def get_pending_vehicles(
@@ -178,7 +229,7 @@ def get_pending_vehicles(
     )
 
 
-# ── Vehicles: Approve / Reject / Edit / Delete ────────────────────────────────
+# Vehicles: Approve / Reject / Edit / Delete
 
 @router.put("/vehicles/{vehicle_id}/approve", response_model=VehicleResponse)
 def approve_vehicle(
