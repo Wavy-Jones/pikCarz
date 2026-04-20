@@ -1,17 +1,23 @@
 """
 Database connection and session management
+Configured for Vercel serverless + Neon PostgreSQL.
+
+NullPool is required for serverless: each request gets a fresh connection
+that is immediately released when the request ends. Persistent pool_size/
+max_overflow settings cause connection exhaustion on Neon when multiple
+Vercel cold-start invocations run simultaneously.
 """
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 from app.config import settings
 
-# Create engine
+# NullPool: no persistent pool — each DB operation opens and closes its own
+# connection. Essential for serverless environments (Vercel + Neon).
 engine = create_engine(
     settings.db_url,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20
+    poolclass=NullPool,
 )
 
 # Session factory

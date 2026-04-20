@@ -234,7 +234,7 @@ async def payfast_webhook(request: Request, db: Session = Depends(get_db)):
 
     if payment_status == "COMPLETE":
         payment.status = PaymentStatus.COMPLETED
-        payment.payfast_payment_id = data.get("pf_payment_id")
+        payment.pf_payment_id = data.get("pf_payment_id")
         user = db.query(User).filter(User.id == payment.user_id).first()
         if user:
             user.subscription_tier = payment.subscription_tier
