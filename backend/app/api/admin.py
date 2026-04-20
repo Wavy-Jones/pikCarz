@@ -1,13 +1,13 @@
 """
-Admin API routes - Approve/reject vehicles, manage users & subscriptions
+Admin API routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import text, func
 from app.database import get_db
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.models.payment import Payment
 from app.models import VehicleStatus, UserRole, PaymentStatus
 from app.schemas.vehicle import VehicleResponse, VehicleListResponse, VehicleUpdate
 from app.core.deps import get_current_admin
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _seller_name(vehicle: Vehicle, owner) -> str:
+def _seller_name(vehicle, owner) -> str:
     if vehicle.contact_name:
         return vehicle.contact_name
     if owner:
@@ -26,18 +26,17 @@ def _seller_name(vehicle: Vehicle, owner) -> str:
     return "Unknown"
 
 
-def _vehicle_response(vehicle: Vehicle, owner) -> VehicleResponse:
+def _vehicle_response(vehicle, owner) -> VehicleResponse:
     resp = VehicleResponse.model_validate(vehicle)
     resp.seller_name   = _seller_name(vehicle, owner)
     resp.seller_type   = owner.role if owner else "individual"
     resp.is_verified   = bool(owner.is_verified_dealer) if owner and owner.role == "dealer" else False
-    resp.contact_name  = vehicle.contact_name  or None
+    resp.contact_name  = vehicle.contact_name or None
     resp.contact_phone = vehicle.contact_phone or None
     return resp
 
 
 def _purge_expired_admin_listings(db: Session):
-    """Delete admin listings that have passed their expires_at (lazy cleanup)."""
     now = datetime.utcnow()
     admin_ids = [row[0] for row in db.query(User.id).filter(User.role == UserRole.ADMIN).all()]
     if not admin_ids:
@@ -82,87 +81,98 @@ def admin_get_subscriptions(
     db: Session = Depends(get_db),
 ):
     """
-    Return all non-admin users with their subscription + payment info.
-
-    Uses 3 targeted queries instead of N+1 or complex subquery joins.
-    The complex subquery approach previously used caused a SQLAlchemy 2.0
-    incompatibility that crashed the endpoint silently (Vercel returned an
-    empty response -> browser reported 'Failed to fetch').
+    Uses raw SQL to avoid all SQLAlchemy ORM / Enum serialisation issues
+    that previously caused silent 500 crashes (browser: "Failed to fetch").
     """
-    now = datetime.utcnow()
+    try:
+        now = datetime.utcnow()
+        offset = (page - 1) * per_page
 
-    # ── 1. Paginated user list ────────────────────────────────────────────────
-    total = db.query(func.count(User.id)).filter(User.role != UserRole.ADMIN).scalar() or 0
-    offset = (page - 1) * per_page
+        # ── Total count ───────────────────────────────────────────────────────
+        count_row = db.execute(
+            text("SELECT COUNT(*) FROM users WHERE role != 'admin'")
+        ).fetchone()
+        total = int(count_row[0]) if count_row else 0
 
-    users = (
-        db.query(User)
-        .filter(User.role != UserRole.ADMIN)
-        .order_by(User.created_at.desc())
-        .offset(offset)
-        .limit(per_page)
-        .all()
-    )
+        # ── Paginated users ───────────────────────────────────────────────────
+        user_rows = db.execute(
+            text("""
+                SELECT id, full_name, email, role::text,
+                       subscription_tier::text, subscription_expires
+                FROM users
+                WHERE role != 'admin'
+                ORDER BY created_at DESC
+                LIMIT :limit OFFSET :offset
+            """),
+            {"limit": per_page, "offset": offset},
+        ).fetchall()
 
-    if not users:
-        return {"total": total, "page": page, "per_page": per_page, "users": []}
+        if not user_rows:
+            return {"total": total, "page": page, "per_page": per_page, "users": []}
 
-    user_ids = [u.id for u in users]
+        user_ids = [row[0] for row in user_rows]
+        # Build placeholders :id0, :id1, ... for the IN clause
+        id_params = {f"id{i}": uid for i, uid in enumerate(user_ids)}
+        in_clause = ", ".join(f":id{i}" for i in range(len(user_ids)))
 
-    # ── 2. Latest completed payment per user (one query, all users) ───────────
-    # Fetch all completed payments for these users, ordered newest-first.
-    # Build a dict keyed by user_id keeping only the first (most recent) hit.
-    all_completed = (
-        db.query(
-            Payment.user_id,
-            Payment.amount,
-            Payment.created_at,
+        # ── Latest completed payment per user ─────────────────────────────────
+        pay_rows = db.execute(
+            text(f"""
+                SELECT DISTINCT ON (user_id)
+                       user_id, amount, created_at
+                FROM payments
+                WHERE user_id IN ({in_clause})
+                  AND status = 'completed'
+                ORDER BY user_id, created_at DESC
+            """),
+            id_params,
+        ).fetchall()
+        last_payment = {row[0]: {"amount": float(row[1]), "date": row[2]} for row in pay_rows}
+
+        # ── Vehicle count per user ────────────────────────────────────────────
+        vcount_rows = db.execute(
+            text(f"""
+                SELECT owner_id, COUNT(*) AS cnt
+                FROM vehicles
+                WHERE owner_id IN ({in_clause})
+                GROUP BY owner_id
+            """),
+            id_params,
+        ).fetchall()
+        vcount = {row[0]: int(row[1]) for row in vcount_rows}
+
+        # ── Assemble ──────────────────────────────────────────────────────────
+        results = []
+        for row in user_rows:
+            uid, full_name, email, role, sub_tier, sub_expires = row
+            is_active = bool(sub_expires and sub_expires > now)
+            lp = last_payment.get(uid)
+            results.append({
+                "id":                   uid,
+                "full_name":            full_name or "",
+                "email":                email or "",
+                "role":                 role or "individual",
+                "subscription_tier":    sub_tier or "free",
+                "subscription_expires": sub_expires.isoformat() if sub_expires else None,
+                "is_active":            is_active,
+                "last_payment_amount":  lp["amount"] if lp else None,
+                "last_payment_date":    lp["date"].isoformat() if lp else None,
+                "vehicle_count":        vcount.get(uid, 0),
+            })
+
+        return {"total": total, "page": page, "per_page": per_page, "users": results}
+
+    except Exception as exc:
+        # Return JSON error so browser sees a real response, not "Failed to fetch"
+        import traceback
+        print(f"[subscriptions] ERROR: {exc}\n{traceback.format_exc()}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(exc), "type": type(exc).__name__},
         )
-        .filter(
-            Payment.user_id.in_(user_ids),
-            Payment.status == PaymentStatus.COMPLETED,
-        )
-        .order_by(Payment.user_id, Payment.created_at.desc())
-        .all()
-    )
-
-    last_payment: dict = {}
-    for row in all_completed:
-        uid = row[0]
-        if uid not in last_payment:
-            last_payment[uid] = {"amount": row[1], "date": row[2]}
-
-    # ── 3. Vehicle count per user (one query, all users) ─────────────────────
-    vcount_rows = (
-        db.query(Vehicle.owner_id, func.count(Vehicle.id).label("cnt"))
-        .filter(Vehicle.owner_id.in_(user_ids))
-        .group_by(Vehicle.owner_id)
-        .all()
-    )
-    vcount: dict = {row[0]: row[1] for row in vcount_rows}
-
-    # ── Assemble response ─────────────────────────────────────────────────────
-    results = []
-    for u in users:
-        lp = last_payment.get(u.id)
-        is_active = bool(u.subscription_expires and u.subscription_expires > now)
-        results.append({
-            "id":                   u.id,
-            "full_name":            u.full_name,
-            "email":                u.email,
-            "role":                 u.role,
-            "subscription_tier":    u.subscription_tier,
-            "subscription_expires": u.subscription_expires.isoformat() if u.subscription_expires else None,
-            "is_active":            is_active,
-            "last_payment_amount":  float(lp["amount"]) if lp else None,
-            "last_payment_date":    lp["date"].isoformat() if lp else None,
-            "vehicle_count":        vcount.get(u.id, 0),
-        })
-
-    return {"total": total, "page": page, "per_page": per_page, "users": results}
 
 
-# ── Vehicles: All Listings ────────────────────────────────────────────────────
+# ── Vehicles: All ─────────────────────────────────────────────────────────────
 
 @router.get("/vehicles/all")
 def admin_list_all_vehicles(
@@ -171,26 +181,19 @@ def admin_list_all_vehicles(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """Admin: list ALL vehicles across every status. Auto-purges expired admin listings."""
     _purge_expired_admin_listings(db)
-
-    total = db.query(func.count(Vehicle.id)).scalar() or 0
+    total  = db.query(func.count(Vehicle.id)).scalar() or 0
     offset = (page - 1) * per_page
     vehicles = (
         db.query(Vehicle)
         .order_by(Vehicle.created_at.desc())
-        .offset(offset)
-        .limit(per_page)
-        .all()
+        .offset(offset).limit(per_page).all()
     )
-
-    owner_cache: dict = {}
-
+    cache: dict = {}
     def _owner(oid):
-        if oid not in owner_cache:
-            owner_cache[oid] = db.query(User).filter(User.id == oid).first()
-        return owner_cache[oid]
-
+        if oid not in cache:
+            cache[oid] = db.query(User).filter(User.id == oid).first()
+        return cache[oid]
     return VehicleListResponse(
         total=total, page=page, per_page=per_page,
         vehicles=[_vehicle_response(v, _owner(v.owner_id)) for v in vehicles],
@@ -206,21 +209,16 @@ def get_pending_vehicles(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """Admin: pending vehicles awaiting approval."""
     _purge_expired_admin_listings(db)
-
-    query = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.PENDING)
-    total = query.count()
+    query  = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.PENDING)
+    total  = query.count()
     offset = (page - 1) * per_page
     vehicles = query.order_by(Vehicle.created_at.desc()).offset(offset).limit(per_page).all()
-
-    owner_cache: dict = {}
-
+    cache: dict = {}
     def _owner(oid):
-        if oid not in owner_cache:
-            owner_cache[oid] = db.query(User).filter(User.id == oid).first()
-        return owner_cache[oid]
-
+        if oid not in cache:
+            cache[oid] = db.query(User).filter(User.id == oid).first()
+        return cache[oid]
     return VehicleListResponse(
         total=total, page=page, per_page=per_page,
         vehicles=[_vehicle_response(v, _owner(v.owner_id)) for v in vehicles],
@@ -230,68 +228,39 @@ def get_pending_vehicles(
 # ── Approve / Reject / Edit / Delete ─────────────────────────────────────────
 
 @router.put("/vehicles/{vehicle_id}/approve", response_model=VehicleResponse)
-def approve_vehicle(
-    vehicle_id: int,
-    current_admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
-    if vehicle.status not in (VehicleStatus.PENDING, VehicleStatus.REJECTED):
-        raise HTTPException(status_code=400, detail=f"Cannot approve a vehicle with status '{vehicle.status}'")
-    vehicle.status = VehicleStatus.ACTIVE
-    db.commit()
-    db.refresh(vehicle)
-    owner = db.query(User).filter(User.id == vehicle.owner_id).first()
-    return _vehicle_response(vehicle, owner)
+def approve_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not v: raise HTTPException(404, "Vehicle not found")
+    if v.status not in (VehicleStatus.PENDING, VehicleStatus.REJECTED):
+        raise HTTPException(400, f"Cannot approve a vehicle with status '{v.status}'")
+    v.status = VehicleStatus.ACTIVE
+    db.commit(); db.refresh(v)
+    return _vehicle_response(v, db.query(User).filter(User.id == v.owner_id).first())
 
 
 @router.put("/vehicles/{vehicle_id}/reject", response_model=VehicleResponse)
-def reject_vehicle(
-    vehicle_id: int,
-    current_admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
-    if vehicle.status != VehicleStatus.PENDING:
-        raise HTTPException(status_code=400, detail="Vehicle is not pending")
-    vehicle.status = VehicleStatus.REJECTED
-    db.commit()
-    db.refresh(vehicle)
-    owner = db.query(User).filter(User.id == vehicle.owner_id).first()
-    return _vehicle_response(vehicle, owner)
+def reject_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not v: raise HTTPException(404, "Vehicle not found")
+    if v.status != VehicleStatus.PENDING: raise HTTPException(400, "Vehicle is not pending")
+    v.status = VehicleStatus.REJECTED
+    db.commit(); db.refresh(v)
+    return _vehicle_response(v, db.query(User).filter(User.id == v.owner_id).first())
 
 
 @router.put("/vehicles/{vehicle_id}/edit", response_model=VehicleResponse)
-def admin_edit_vehicle(
-    vehicle_id: int,
-    vehicle_data: VehicleUpdate,
-    current_admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
+def admin_edit_vehicle(vehicle_id: int, vehicle_data: VehicleUpdate, current_admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not v: raise HTTPException(404, "Vehicle not found")
     for field, value in vehicle_data.model_dump(exclude_unset=True).items():
-        setattr(vehicle, field, value)
-    db.commit()
-    db.refresh(vehicle)
-    owner = db.query(User).filter(User.id == vehicle.owner_id).first()
-    return _vehicle_response(vehicle, owner)
+        setattr(v, field, value)
+    db.commit(); db.refresh(v)
+    return _vehicle_response(v, db.query(User).filter(User.id == v.owner_id).first())
 
 
 @router.delete("/vehicles/{vehicle_id}")
-def admin_delete_vehicle(
-    vehicle_id: int,
-    current_admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
-    db.delete(vehicle)
-    db.commit()
+def admin_delete_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not v: raise HTTPException(404, "Vehicle not found")
+    db.delete(v); db.commit()
     return {"message": "Vehicle deleted"}
