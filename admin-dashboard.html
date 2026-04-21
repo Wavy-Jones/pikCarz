@@ -387,7 +387,15 @@
     div.innerHTML = '<p style="color:var(--muted);padding:16px">Loading subscriptions…</p>';
     try {
       const res = await fetch(`${API_BASE}/api/admin/subscriptions?per_page=100`, { headers: authHeaders() });
-      if (!res.ok) throw new Error(`${res.status}`);
+      if (!res.ok) {
+        // Read the body to get the actual Python error message
+        let errMsg = `Server error ${res.status}`;
+        try {
+          const body = await res.json();
+          errMsg = body.detail || body.type || errMsg;
+        } catch(_) {}
+        throw new Error(errMsg);
+      }
       const data = await res.json();
       const users = data.users || [];
       if (!users.length) { div.innerHTML = '<p style="color:var(--muted);padding:16px">No registered users yet.</p>'; return; }

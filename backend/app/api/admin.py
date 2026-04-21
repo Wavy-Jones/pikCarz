@@ -16,8 +16,6 @@ from datetime import datetime
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _seller_name(vehicle, owner) -> str:
     if vehicle.contact_name:
         return vehicle.contact_name
@@ -52,8 +50,6 @@ def _purge_expired_admin_listings(db: Session):
         db.commit()
 
 
-# ── Stats ─────────────────────────────────────────────────────────────────────
-
 @router.get("/stats")
 def get_admin_stats(
     current_admin: User = Depends(get_current_admin),
@@ -71,8 +67,6 @@ def get_admin_stats(
     }
 
 
-# ── Subscriptions Overview ────────────────────────────────────────────────────
-
 @router.get("/subscriptions")
 def admin_get_subscriptions(
     page: int = Query(1, ge=1),
@@ -81,67 +75,65 @@ def admin_get_subscriptions(
     db: Session = Depends(get_db),
 ):
     """
-    Uses raw SQL to avoid all SQLAlchemy ORM / Enum serialisation issues
-    that previously caused silent 500 crashes (browser: "Failed to fetch").
+    Raw SQL with explicit ::text casts on all ENUM columns.
+    PostgreSQL raises 'operator does not exist: userrole != unknown' when you
+    compare an ENUM column directly to a string literal without casting.
     """
     try:
         now = datetime.utcnow()
         offset = (page - 1) * per_page
 
-        # ── Total count ───────────────────────────────────────────────────────
+        # role is a PostgreSQL ENUM — cast to ::text before comparing with string
         count_row = db.execute(
-            text("SELECT COUNT(*) FROM users WHERE role != 'admin'")
+            text("SELECT COUNT(*) FROM users WHERE role::text != 'admin'")
         ).fetchone()
         total = int(count_row[0]) if count_row else 0
 
-        # ── Paginated users ───────────────────────────────────────────────────
         user_rows = db.execute(
-            text("""
-                SELECT id, full_name, email, role::text,
-                       subscription_tier::text, subscription_expires
-                FROM users
-                WHERE role != 'admin'
-                ORDER BY created_at DESC
-                LIMIT :limit OFFSET :offset
-            """),
-            {"limit": per_page, "offset": offset},
+            text(
+                "SELECT id, full_name, email, role::text, "
+                "       subscription_tier::text, subscription_expires "
+                "FROM users "
+                "WHERE role::text != 'admin' "
+                "ORDER BY created_at DESC "
+                "LIMIT :lim OFFSET :off"
+            ),
+            {"lim": per_page, "off": offset},
         ).fetchall()
 
         if not user_rows:
             return {"total": total, "page": page, "per_page": per_page, "users": []}
 
         user_ids = [row[0] for row in user_rows]
-        # Build placeholders :id0, :id1, ... for the IN clause
-        id_params = {f"id{i}": uid for i, uid in enumerate(user_ids)}
-        in_clause = ", ".join(f":id{i}" for i in range(len(user_ids)))
 
-        # ── Latest completed payment per user ─────────────────────────────────
+        # Build :id0, :id1 … placeholders (SQLAlchemy text() doesn't support lists)
+        id_params = {f"p{i}": uid for i, uid in enumerate(user_ids)}
+        in_clause = ", ".join(f":p{i}" for i in range(len(user_ids)))
+
+        # status is also a PostgreSQL ENUM — cast ::text
         pay_rows = db.execute(
-            text(f"""
-                SELECT DISTINCT ON (user_id)
-                       user_id, amount, created_at
-                FROM payments
-                WHERE user_id IN ({in_clause})
-                  AND status = 'completed'
-                ORDER BY user_id, created_at DESC
-            """),
+            text(
+                "SELECT DISTINCT ON (user_id) user_id, amount, created_at "
+                f"FROM payments "
+                f"WHERE user_id IN ({in_clause}) "
+                f"  AND status::text = 'completed' "
+                f"ORDER BY user_id, created_at DESC"
+            ),
             id_params,
         ).fetchall()
         last_payment = {row[0]: {"amount": float(row[1]), "date": row[2]} for row in pay_rows}
 
-        # ── Vehicle count per user ────────────────────────────────────────────
         vcount_rows = db.execute(
-            text(f"""
-                SELECT owner_id, COUNT(*) AS cnt
-                FROM vehicles
-                WHERE owner_id IN ({in_clause})
-                GROUP BY owner_id
-            """),
+            text(
+                "SELECT owner_id, COUNT(*) AS cnt "
+                f"FROM vehicles "
+                f"WHERE owner_id IN ({in_clause}) "
+                f"GROUP BY owner_id"
+            ),
             id_params,
         ).fetchall()
         vcount = {row[0]: int(row[1]) for row in vcount_rows}
 
-        # ── Assemble ──────────────────────────────────────────────────────────
         results = []
         for row in user_rows:
             uid, full_name, email, role, sub_tier, sub_expires = row
@@ -163,16 +155,14 @@ def admin_get_subscriptions(
         return {"total": total, "page": page, "per_page": per_page, "users": results}
 
     except Exception as exc:
-        # Return JSON error so browser sees a real response, not "Failed to fetch"
         import traceback
-        print(f"[subscriptions] ERROR: {exc}\n{traceback.format_exc()}")
+        tb = traceback.format_exc()
+        print(f"[/api/admin/subscriptions] 500 ERROR:\n{tb}")
         return JSONResponse(
             status_code=500,
-            content={"detail": str(exc), "type": type(exc).__name__},
+            content={"detail": str(exc), "type": type(exc).__name__, "trace": tb},
         )
 
-
-# ── Vehicles: All ─────────────────────────────────────────────────────────────
 
 @router.get("/vehicles/all")
 def admin_list_all_vehicles(
@@ -200,8 +190,6 @@ def admin_list_all_vehicles(
     )
 
 
-# ── Vehicles: Pending ─────────────────────────────────────────────────────────
-
 @router.get("/vehicles/pending", response_model=VehicleListResponse)
 def get_pending_vehicles(
     page: int = Query(1, ge=1),
@@ -224,8 +212,6 @@ def get_pending_vehicles(
         vehicles=[_vehicle_response(v, _owner(v.owner_id)) for v in vehicles],
     )
 
-
-# ── Approve / Reject / Edit / Delete ─────────────────────────────────────────
 
 @router.put("/vehicles/{vehicle_id}/approve", response_model=VehicleResponse)
 def approve_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), db: Session = Depends(get_db)):
