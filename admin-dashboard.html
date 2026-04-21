@@ -109,6 +109,20 @@
     <div class="stat-card"><h3>Verified Dealers</h3><div class="value" id="stat-dealers">0</div></div>
   </div>
 
+  <!-- Revenue -->
+  <div class="admin-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>💰 Revenue</h2>
+      <button onclick="loadRevenue()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+      <div class="stat-card"><h3>All-Time Revenue</h3><div class="value" id="rev-alltime">R —</div></div>
+      <div class="stat-card"><h3>Total Payments</h3><div class="value" id="rev-payments">—</div></div>
+      <div class="stat-card"><h3>This Month</h3><div class="value" id="rev-thismonth">R —</div></div>
+    </div>
+    <div id="revenue-table"><p style="color:var(--muted)">Loading revenue…</p></div>
+  </div>
+
   <!-- ── Pending Vehicles ───────────────────── -->
   <div class="admin-section">
     <h2>🚦 Pending Vehicles Awaiting Approval</h2>
@@ -320,7 +334,7 @@
 
   async function loadDashboard() {
     document.getElementById('admin-name').textContent = userData.full_name || 'Admin';
-    await Promise.allSettled([loadStats(), loadPendingVehicles(), loadAllListings(), loadSubscriptions()]);
+    await Promise.allSettled([loadStats(), loadRevenue(), loadPendingVehicles(), loadAllListings(), loadSubscriptions()]);
   }
 
   /* ── Auth header ──────────────────────────── */
@@ -343,6 +357,50 @@
       ['stat-users','stat-vehicles','stat-active','stat-pending','stat-dealers'].forEach(id => {
         document.getElementById(id).textContent = '—';
       });
+    }
+  }
+
+  /* Revenue */
+  async function loadRevenue() {
+    const tableDiv = document.getElementById('revenue-table');
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/revenue`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      const fmt = n => 'R ' + Number(n).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      document.getElementById('rev-alltime').textContent    = fmt(d.all_time_total);
+      document.getElementById('rev-payments').textContent   = d.all_time_payments;
+
+      const thisMonthKey = new Date().toISOString().slice(0, 7);
+      const thisMonth = (d.monthly || []).find(m => m.month === thisMonthKey);
+      document.getElementById('rev-thismonth').textContent  = fmt(thisMonth ? thisMonth.total : 0);
+
+      if (!d.monthly || !d.monthly.length) {
+        tableDiv.innerHTML = '<p style="color:var(--muted)">No completed payments yet.</p>';
+        return;
+      }
+
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      tableDiv.innerHTML = `
+        <div style="overflow-x:auto">
+          <table class="sub-table">
+            <thead><tr><th>Month</th><th>Revenue</th><th>Payments</th></tr></thead>
+            <tbody>
+              ${d.monthly.map(m => {
+                const [yr, mo] = m.month.split('-');
+                const label = `${months[parseInt(mo,10)-1]} ${yr}`;
+                return `<tr>
+                  <td>${label}</td>
+                  <td style="color:#10b981;font-weight:700">${fmt(m.total)}</td>
+                  <td>${m.payments}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch (err) {
+      tableDiv.innerHTML = `<p style="color:#ef4444">Could not load revenue: ${err.message}</p>`;
     }
   }
 

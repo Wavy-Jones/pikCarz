@@ -11,9 +11,18 @@ from app.models.vehicle import Vehicle
 from app.models import VehicleStatus, UserRole, PaymentStatus
 from app.schemas.vehicle import VehicleResponse, VehicleListResponse, VehicleUpdate
 from app.core.deps import get_current_admin
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
+
+
+def _now_aware():
+    """Return current UTC time as a timezone-aware datetime.
+    Using datetime.utcnow() returns a naive datetime which cannot be compared
+    to timezone-aware datetimes from Postgres (TypeError: can't compare
+    offset-naive and offset-aware datetimes).
+    """
+    return datetime.now(tz=timezone.utc)
 
 
 def _seller_name(vehicle, owner) -> str:
@@ -35,7 +44,7 @@ def _vehicle_response(vehicle, owner) -> VehicleResponse:
 
 
 def _purge_expired_admin_listings(db: Session):
-    now = datetime.utcnow()
+    now = _now_aware()
     admin_ids = [row[0] for row in db.query(User.id).filter(User.role == UserRole.ADMIN).all()]
     if not admin_ids:
         return
@@ -67,6 +76,55 @@ def get_admin_stats(
     }
 
 
+@router.get("/revenue")
+def get_revenue(
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Monthly revenue breakdown for the last 12 months plus all-time total.
+    Returns completed payments only.
+    """
+    try:
+        rows = db.execute(
+            text("""
+                SELECT
+                    TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month,
+                    SUM(amount)::float                                   AS total,
+                    COUNT(*)                                             AS payments
+                FROM payments
+                WHERE status::text = 'completed'
+                  AND created_at >= NOW() - INTERVAL '12 months'
+                GROUP BY DATE_TRUNC('month', created_at)
+                ORDER BY DATE_TRUNC('month', created_at) DESC
+            """)
+        ).fetchall()
+
+        all_time_row = db.execute(
+            text("""
+                SELECT COALESCE(SUM(amount), 0)::float AS total,
+                       COUNT(*) AS payments
+                FROM payments
+                WHERE status::text = 'completed'
+            """)
+        ).fetchone()
+
+        monthly = [
+            {"month": row[0], "total": round(row[1], 2), "payments": int(row[2])}
+            for row in rows
+        ]
+
+        return {
+            "monthly": monthly,
+            "all_time_total":    round(all_time_row[0], 2) if all_time_row else 0,
+            "all_time_payments": int(all_time_row[1]) if all_time_row else 0,
+        }
+    except Exception as exc:
+        import traceback
+        print(f"[/api/admin/revenue] ERROR:\n{traceback.format_exc()}")
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
 @router.get("/subscriptions")
 def admin_get_subscriptions(
     page: int = Query(1, ge=1),
@@ -80,10 +138,9 @@ def admin_get_subscriptions(
     compare an ENUM column directly to a string literal without casting.
     """
     try:
-        now = datetime.utcnow()
+        now = _now_aware()
         offset = (page - 1) * per_page
 
-        # role is a PostgreSQL ENUM — cast to ::text before comparing with string
         count_row = db.execute(
             text("SELECT COUNT(*) FROM users WHERE role::text != 'admin'")
         ).fetchone()
@@ -105,12 +162,9 @@ def admin_get_subscriptions(
             return {"total": total, "page": page, "per_page": per_page, "users": []}
 
         user_ids = [row[0] for row in user_rows]
-
-        # Build :id0, :id1 … placeholders (SQLAlchemy text() doesn't support lists)
         id_params = {f"p{i}": uid for i, uid in enumerate(user_ids)}
         in_clause = ", ".join(f":p{i}" for i in range(len(user_ids)))
 
-        # status is also a PostgreSQL ENUM — cast ::text
         pay_rows = db.execute(
             text(
                 "SELECT DISTINCT ON (user_id) user_id, amount, created_at "
@@ -137,6 +191,7 @@ def admin_get_subscriptions(
         results = []
         for row in user_rows:
             uid, full_name, email, role, sub_tier, sub_expires = row
+            # sub_expires from Postgres is timezone-aware; _now_aware() matches it
             is_active = bool(sub_expires and sub_expires > now)
             lp = last_payment.get(uid)
             results.append({
@@ -157,10 +212,10 @@ def admin_get_subscriptions(
     except Exception as exc:
         import traceback
         tb = traceback.format_exc()
-        print(f"[/api/admin/subscriptions] 500 ERROR:\n{tb}")
+        print(f"[/api/admin/subscriptions] ERROR:\n{tb}")
         return JSONResponse(
             status_code=500,
-            content={"detail": str(exc), "type": type(exc).__name__, "trace": tb},
+            content={"detail": str(exc), "type": type(exc).__name__},
         )
 
 
