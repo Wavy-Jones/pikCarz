@@ -305,3 +305,22 @@ def admin_delete_vehicle(vehicle_id: int, current_admin=Depends(get_current_admi
     if not v: raise HTTPException(404, "Vehicle not found")
     db.delete(v); db.commit()
     return {"message": "Vehicle deleted"}
+
+
+@router.delete("/users/{user_id}")
+def admin_delete_user(user_id: int, current_admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """
+    Admin: permanently delete a user account and all their listings.
+    Cannot delete other admins.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    if user.role == UserRole.ADMIN:
+        raise HTTPException(403, "Cannot delete admin accounts")
+    if user.id == current_admin.id:
+        raise HTTPException(400, "Cannot delete your own account")
+    # Vehicles cascade-delete via FK; payments stay for audit trail
+    db.delete(user)
+    db.commit()
+    return {"message": f"User {user.email} deleted"}}

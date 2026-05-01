@@ -7,6 +7,85 @@
   <meta name="description" content="Browse new cars, used cars, motorbikes, trucks and more. Filter by make, model, price, location and more." />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23FF4545'/><text y='.9em' font-size='70' x='10' fill='white' font-weight='900'>P</text></svg>" />
+  <style>
+    /* ── Collapsible filter panel ───────────── */
+    #filter-panel {
+      display: none;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 24px 0;
+      animation: filterSlide 0.22s ease;
+    }
+    #filter-panel.open { display: block; }
+    @keyframes filterSlide {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .filter-group label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .filter-group select,
+    .filter-group input[type="text"] {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--white);
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    .filter-group select:focus,
+    .filter-group input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .price-range { display: flex; gap: 8px; align-items: center; }
+    .price-range select { flex: 1; }
+    .filter-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .filter-toggle-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--white);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-top: 14px;
+    }
+    .filter-toggle-btn:hover,
+    .filter-toggle-btn.active { border-color: var(--accent); color: var(--accent); }
+    .filter-toggle-btn svg { transition: transform 0.2s; }
+    .filter-toggle-btn.active svg.chevron { transform: rotate(180deg); }
+    .active-filter-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,69,69,0.12); border: 1px solid rgba(255,69,69,0.3);
+      color: var(--accent); font-size: 0.78rem; font-weight: 600;
+      padding: 3px 10px 3px 12px; border-radius: 100px;
+    }
+    .active-filter-tag button {
+      background: none; border: none; color: var(--accent);
+      cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0 0 4px;
+    }
+    @media (max-width: 640px) {
+      .filter-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 420px) {
+      .filter-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
@@ -49,141 +128,141 @@
   <div class="container" style="position:relative;z-index:2">
     <div class="breadcrumb"><a href="index.html">Home</a><span>/</span><span>Browse Vehicles</span></div>
     <h1>Browse <span class="text-accent">Vehicles</span></h1>
-    <p style="color:var(--muted);margin-top:10px;font-size:1rem">Find your next car, bakkie, bike or truck from thousands of listings</p>
-    <!-- Search Bar -->
-    <div class="search-box" style="margin-top:28px;max-width:700px">
-      <select aria-label="Category">
-        <option value="">All Vehicles</option>
-        <option>New Cars</option>
-        <option>Used Cars</option>
-        <option>Motorbikes</option>
-        <option>Trucks &amp; Bakkies</option>
-        <option>Other</option>
-      </select>
-      <input type="text" placeholder="Search make, model, keyword…" />
-      <button class="btn-primary">Search</button>
+    <p style="color:var(--muted);margin-top:8px;font-size:1rem">Find your next car, bakkie, bike or truck from our listings</p>
+
+    <!-- Search Bar (no category select — use Filters button below) -->
+    <div class="search-box" style="margin-top:22px;max-width:700px">
+      <input type="text" id="browse-search-input" placeholder="Search make, model, keyword…" />
+      <button class="btn-primary" id="browse-search-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search
+      </button>
     </div>
+
+    <!-- Filter toggle button -->
+    <button id="filter-toggle-btn" class="filter-toggle-btn" onclick="toggleFilterPanel()">
+      <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filters
+      <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
+    <!-- Active filter tags -->
+    <div id="active-filter-tags" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
   </div>
 </section>
 
-<!-- Category Chips -->
-<div style="border-bottom:1px solid var(--border);padding:16px 0">
-  <div class="container"><div class="cat-row">
-    <button class="cat-chip active">All Vehicles</button>
-    <button class="cat-chip">New Cars</button>
-    <button class="cat-chip">Used Cars</button>
-    <button class="cat-chip">Motorbikes</button>
-    <button class="cat-chip">Trucks &amp; Bakkies</button>
-    <button class="cat-chip">Other</button>
-    <button id="filter-toggle" class="btn-ghost" style="margin-left:auto;display:none">⚙ Filters</button>
-  </div></div>
+<!-- Collapsible Filter Panel -->
+<div id="filter-panel">
+  <div class="container">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label>Vehicle Type</label>
+        <select id="f-category">
+          <option value="">All Types</option>
+          <option value="new_car">New Car</option>
+          <option value="used_car">Used Car</option>
+          <option value="motorbike">Motorbike</option>
+          <option value="truck">Truck / Bakkie</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Make</label>
+        <select id="f-make">
+          <option value="">Any Make</option>
+          <option>BMW</option><option>Mercedes-Benz</option><option>Toyota</option>
+          <option>Volkswagen</option><option>Ford</option><option>Nissan</option>
+          <option>Audi</option><option>Honda</option><option>Porsche</option>
+          <option>Hyundai</option><option>Kawasaki</option><option>Yamaha</option>
+          <option>Suzuki</option><option>Isuzu</option><option>Mahindra</option>
+          <option>Haval</option><option>GWM</option><option>Kia</option>
+          <option>Mazda</option><option>Mitsubishi</option><option>Renault</option>
+          <option>Chevrolet</option><option>Land Rover</option><option>Jeep</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Model</label>
+        <input type="text" id="f-model" placeholder="e.g. Hilux, Golf, Ranger…" />
+      </div>
+      <div class="filter-group">
+        <label>Year (From)</label>
+        <select id="f-year-from">
+          <option value="">Any</option>
+          <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
+          <option>2022</option><option>2021</option><option>2020</option><option>2019</option>
+          <option>2018</option><option>2017</option><option>2015</option><option>2010</option>
+          <option>2005</option><option>2000</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Price Range (ZAR)</label>
+        <select id="f-price">
+          <option value="">All Prices</option>
+          <option value="0-100000">R 0 – R 100,000</option>
+          <option value="100000-200000">R 100,000 – R 200,000</option>
+          <option value="200000-300000">R 200,000 – R 300,000</option>
+          <option value="300000-400000">R 300,000 – R 400,000</option>
+          <option value="400000-500000">R 400,000 – R 500,000</option>
+          <option value="500000-700000">R 500,000 – R 700,000</option>
+          <option value="700000-900000">R 700,000 – R 900,000</option>
+          <option value="900000+">R 900,000 +</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Province</label>
+        <select id="f-province">
+          <option value="">All Provinces</option>
+          <option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option>
+          <option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option>
+          <option>North West</option><option>Free State</option><option>Northern Cape</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Transmission</label>
+        <select id="f-transmission">
+          <option value="">Any</option>
+          <option>Automatic</option><option>Manual</option><option>Semi-Automatic</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Fuel Type</label>
+        <select id="f-fuel">
+          <option value="">Any</option>
+          <option>Petrol</option><option>Diesel</option><option>Electric</option><option>Hybrid</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn-primary" id="apply-filters-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        Apply Filters
+      </button>
+      <button class="btn-ghost" onclick="clearAllFilters()" style="font-size:0.88rem">Clear All</button>
+    </div>
+  </div>
 </div>
 
-<!-- Browse Layout -->
-<section class="section">
+<!-- Results -->
+<section class="section" style="padding-top:32px">
   <div class="container">
-    <div class="browse-layout">
+    <div class="results-header">
+      <p class="results-count" id="results-count">Loading vehicles…</p>
+      <select class="sort-select" id="sort-select" aria-label="Sort by">
+        <option value="">Sort: Featured First</option>
+        <option value="price_asc">Price: Low to High</option>
+        <option value="price_desc">Price: High to Low</option>
+        <option value="newest">Newest First</option>
+      </select>
+    </div>
 
-      <!-- Filter Panel -->
-      <aside class="filter-panel">
-        <h4>Filters <button onclick="document.querySelectorAll('.filter-group select').forEach(s=>s.selectedIndex=0)">Clear All</button></h4>
+    <div class="vehicles-grid" id="vehicles-grid">
+      <p style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">Loading vehicles…</p>
+    </div>
 
-        <div class="filter-group">
-          <label>Vehicle Type</label>
-          <select><option value="">All Types</option><option>New Car</option><option>Used Car</option><option>Motorbike</option><option>Truck / Bakkie</option><option>Other</option></select>
-        </div>
-
-        <div class="filter-group">
-          <label>Make</label>
-          <select><option value="">Any Make</option><option>BMW</option><option>Mercedes-Benz</option><option>Toyota</option><option>Volkswagen</option><option>Ford</option><option>Nissan</option><option>Audi</option><option>Honda</option><option>Porsche</option><option>Hyundai</option><option>Kawasaki</option><option>Yamaha</option><option>Suzuki</option></select>
-        </div>
-
-        <div class="filter-group">
-          <label>Model</label>
-          <input type="text" placeholder="e.g. Golf, Hilux, Ranger…" />
-        </div>
-
-        <div class="filter-group">
-          <label>Year</label>
-          <div class="price-range">
-            <select><option value="">From</option><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2015</option><option>2010</option></select>
-            <span>–</span>
-            <select><option value="">To</option><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option></select>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label>Price Range (ZAR)</label>
-          <select>
-            <option value="">All Prices</option>
-            <option value="0-100000">R 0 – R 100,000</option>
-            <option value="100000-200000">R 100,000 – R 200,000</option>
-            <option value="200000-300000">R 200,000 – R 300,000</option>
-            <option value="300000-400000">R 300,000 – R 400,000</option>
-            <option value="400000-500000">R 400,000 – R 500,000</option>
-            <option value="500000-700000">R 500,000 – R 700,000</option>
-            <option value="700000-900000">R 700,000 – R 900,000</option>
-            <option value="900000+">R 900,000 +</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label>Province</label>
-          <select><option value="">All Provinces</option><option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Free State</option><option>Northern Cape</option></select>
-        </div>
-
-        <div class="filter-group">
-          <label>Transmission</label>
-          <div class="checkbox-list">
-            <label class="checkbox-item"><input type="checkbox" /> Automatic</label>
-            <label class="checkbox-item"><input type="checkbox" /> Manual</label>
-            <label class="checkbox-item"><input type="checkbox" /> Semi-Automatic</label>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label>Fuel Type</label>
-          <div class="checkbox-list">
-            <label class="checkbox-item"><input type="checkbox" /> Petrol</label>
-            <label class="checkbox-item"><input type="checkbox" /> Diesel</label>
-            <label class="checkbox-item"><input type="checkbox" /> Electric</label>
-            <label class="checkbox-item"><input type="checkbox" /> Hybrid</label>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label>Seller Type</label>
-          <div class="checkbox-list">
-            <label class="checkbox-item"><input type="checkbox" /> Private Seller</label>
-            <label class="checkbox-item"><input type="checkbox" /> Verified Dealer</label>
-          </div>
-        </div>
-
-        <button class="filter-btn">Apply Filters</button>
-      </aside>
-
-      <!-- Results -->
-      <div>
-        <div class="results-header">
-          <p class="results-count">Showing <strong>48</strong> of <strong>4,832</strong> vehicles</p>
-          <select class="sort-select" aria-label="Sort by">
-            <option>Sort: Featured First</option>
-            <option>Price: Low to High</option>
-            <option>Price: High to Low</option>
-            <option>Newest First</option>
-            <option>Lowest Mileage</option>
-          </select>
-        </div>
-
-        <div class="vehicles-grid">
-          <p style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">Loading vehicles…</p>
-        </div>
-
-        <!-- Load More -->
-        <div style="text-align:center;margin-top:40px">
-          <button class="btn-primary" style="padding:14px 36px;font-size:0.95rem">Load More Vehicles</button>
-        </div>
-      </div>
+    <div style="text-align:center;margin-top:40px">
+      <button class="btn-primary load-more-btn" style="padding:14px 36px;font-size:0.95rem;display:none">Load More Vehicles</button>
     </div>
   </div>
 </section>
@@ -199,18 +278,31 @@
         </a>
         <p>South Africa's growing vehicle marketplace. Connect buyers and sellers with ease, trust, and simplicity.</p>
       </div>
-      <div class="footer-col"><h5>Browse</h5><ul><li><a href="browse.html?type=new-cars">New Cars</a></li><li><a href="browse.html?type=used-cars">Used Cars</a></li><li><a href="browse.html?type=motorbikes">Motorbikes</a></li><li><a href="browse.html?type=trucks">Trucks &amp; Bakkies</a></li></ul></div>
-      <div class="footer-col"><h5>Sellers</h5><ul><li><a href="dashboard.html">List a Vehicle</a></li><li><a href="pricing.html">Pricing &amp; Plans</a></li><li><a href="contact.html">Dealer Registration</a></li></ul></div>
-      <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About pikCarz</a></li><li><a href="contact.html">Contact Us</a></li><li><a href="privacy-policy.html">Privacy Policy</a></li><li><a href="terms-of-service.html">Terms of Service</a></li></ul></div>
+      <div class="footer-col"><h5>Browse</h5><ul>
+        <li><a href="browse.html?type=new_car">New Cars</a></li>
+        <li><a href="browse.html?type=used_car">Used Cars</a></li>
+        <li><a href="browse.html?type=motorbike">Motorbikes</a></li>
+        <li><a href="browse.html?type=truck">Trucks &amp; Bakkies</a></li>
+      </ul></div>
+      <div class="footer-col"><h5>Sellers</h5><ul>
+        <li><a href="dashboard.html">List a Vehicle</a></li>
+        <li><a href="contact.html">Dealer Registration</a></li>
+      </ul></div>
+      <div class="footer-col"><h5>Company</h5><ul>
+        <li><a href="about.html">About pikCarz</a></li>
+        <li><a href="contact.html">Contact Us</a></li>
+        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+        <li><a href="terms-of-service.html">Terms of Service</a></li>
+      </ul></div>
     </div>
     <div class="footer-bottom">
       <p>&copy; 2026 pikCarz — A <strong>Cubeas</strong> product. All rights reserved.</p>
       <div class="footer-socials">
-        <a href="https://www.facebook.com/share/18VdbTzpev/" class="social-btn" aria-label="Facebook" title="Follow us on Facebook"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
-        <a href="https://www.instagram.com/pikcarz?igsh=MTZ2bHU0Ym91a2h3bg==" class="social-btn" aria-label="Instagram" title="Follow us on Instagram"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
-        <a href="https://www.tiktok.com/@pikcarz?_r=1&_t=ZS-94zQTBunb6q" class="social-btn" aria-label="TikTok" title="Follow us on TikTok"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg></a>
-        <a href="https://www.linkedin.com/company/pikcarz/" class="social-btn" aria-label="LinkedIn" title="Connect with us on LinkedIn"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
-        <a href="https://wa.me/27615393801" target="_blank" rel="noopener" class="social-btn" aria-label="WhatsApp" title="Chat with us on WhatsApp"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>
+        <a href="https://www.facebook.com/share/18VdbTzpev/" class="social-btn" aria-label="Facebook"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+        <a href="https://www.instagram.com/pikcarz?igsh=MTZ2bHU0Ym91a2h3bg==" class="social-btn" aria-label="Instagram"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="https://www.tiktok.com/@pikcarz?_r=1&_t=ZS-94zQTBunb6q" class="social-btn" aria-label="TikTok"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg></a>
+        <a href="https://www.linkedin.com/company/pikcarz/" class="social-btn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+        <a href="https://wa.me/27615393801" target="_blank" rel="noopener" class="social-btn" aria-label="WhatsApp"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>
       </div>
     </div>
   </div>

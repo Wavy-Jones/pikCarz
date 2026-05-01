@@ -16,6 +16,27 @@
   <meta property="og:image" content="https://pikcarz.co.za/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://pikcarz.co.za/og-image.png" />
+  <style>
+    /* ── Inline hero tweaks for compact layout ── */
+    .hero-compact {
+      min-height: auto;
+      padding: 32px 0 24px;
+    }
+    .hero-search-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .hero-search-row .search-box {
+      flex: 1;
+      min-width: 260px;
+      max-width: 620px;
+      margin: 0;
+    }
+    .featured-tight { padding-top: 28px; padding-bottom: 60px; }
+  </style>
 </head>
 <body>
 
@@ -58,88 +79,43 @@
   </nav>
 </header>
 
-<!-- ── Hero ─────────────────────────────── -->
-<section class="hero">
+<!-- ── Hero (compact — cars visible sooner) ── -->
+<section class="hero hero-compact">
   <div class="hero-grid-bg"></div>
   <div class="container">
-    <div class="hero-content fade-in">
+    <div class="hero-content fade-in" style="max-width:860px">
       <div class="hero-badge">South Africa's Fastest Growing Auto Marketplace</div>
-      <h1>Find Your<br/><span class="text-accent">Perfect Ride</span><br/>Today</h1>
-      <p>Browse thousands of new &amp; used cars, motorbikes, trucks and more. Connect directly with sellers across South Africa.</p>
+      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin-bottom:10px">
+        Find Your <span class="text-accent">Perfect Ride</span> Today
+      </h1>
+      <p style="font-size:0.95rem;margin-bottom:0;line-height:1.6;color:var(--muted)">
+        Browse new &amp; used cars, motorbikes, trucks and more across South Africa.
+      </p>
 
-      <div class="search-box">
-        <select aria-label="Vehicle type">
-          <option value="">All Vehicles</option>
-          <option value="new-cars">New Cars</option>
-          <option value="used-cars">Used Cars</option>
-          <option value="motorbikes">Motorbikes</option>
-          <option value="trucks">Trucks</option>
-          <option value="other">Other</option>
-        </select>
-        <input type="text" placeholder="Search by make, model or keyword…" aria-label="Search vehicles" />
-        <a href="browse.html" class="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Search
-        </a>
+      <!-- Search + quick filter on one row -->
+      <div class="hero-search-row">
+        <div class="search-box" style="flex:1;min-width:260px;max-width:620px;margin:0">
+          <select id="hero-type" aria-label="Vehicle type">
+            <option value="">All Vehicles</option>
+            <option value="new_car">New Cars</option>
+            <option value="used_car">Used Cars</option>
+            <option value="motorbike">Motorbikes</option>
+            <option value="truck">Trucks &amp; Bakkies</option>
+            <option value="other">Other</option>
+          </select>
+          <input type="text" id="hero-kw" placeholder="Search make, model or keyword…" aria-label="Search vehicles" />
+          <button class="btn-primary" onclick="doHeroSearch()">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search
+          </button>
+        </div>
       </div>
     </div>
   </div>
-  <div class="hero-visual" aria-hidden="true">
-    <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" class="hero-car-img">
-      <ellipse cx="350" cy="240" rx="300" ry="18" fill="rgba(240,90,26,0.12)"/>
-      <rect x="100" y="160" width="500" height="80" rx="12" fill="#1a2235"/>
-      <path d="M200 160 Q240 90 320 80 L430 80 Q490 90 510 160Z" fill="#1f2d45"/>
-      <path d="M215 158 Q248 102 315 94 L380 94 Q425 100 445 158Z" fill="rgba(240,90,26,0.15)" stroke="rgba(240,90,26,0.3)" stroke-width="1"/>
-      <line x1="318" y1="94" x2="318" y2="158" stroke="rgba(240,90,26,0.3)" stroke-width="1.5"/>
-      <ellipse cx="570" cy="195" rx="20" ry="10" fill="#F05A1A" opacity="0.9"/>
-      <ellipse cx="570" cy="195" rx="12" ry="6" fill="#fff" opacity="0.7"/>
-      <rect x="105" y="185" width="22" height="12" rx="4" fill="#F05A1A" opacity="0.8"/>
-      <circle cx="210" cy="240" r="42" fill="#111827" stroke="#2a3550" stroke-width="4"/>
-      <circle cx="210" cy="240" r="28" fill="#0d1929" stroke="#F05A1A" stroke-width="2"/>
-      <circle cx="210" cy="240" r="10" fill="#F05A1A"/>
-      <circle cx="490" cy="240" r="42" fill="#111827" stroke="#2a3550" stroke-width="4"/>
-      <circle cx="490" cy="240" r="28" fill="#0d1929" stroke="#F05A1A" stroke-width="2"/>
-      <circle cx="490" cy="240" r="10" fill="#F05A1A"/>
-      <path d="M510 160 Q580 155 590 175 L590 200 L510 200Z" fill="#1a2235" stroke="#2a3550" stroke-width="1"/>
-      <rect x="572" y="185" width="18" height="30" rx="4" fill="#111827" stroke="#F05A1A" stroke-width="1.5"/>
-    </svg>
-  </div>
 </section>
 
-<!-- ── Categories ────────────────────────── -->
-<section class="categories">
-  <div class="container">
-    <div class="cat-row">
-      <button class="cat-chip active" onclick="window.location='browse.html?type=all'">
-        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-        All Vehicles
-      </button>
-      <button class="cat-chip" onclick="window.location='browse.html?type=new-cars'">
-        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7.5" cy="14.5" r="1.5"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>
-        New Cars
-      </button>
-      <button class="cat-chip" onclick="window.location='browse.html?type=used-cars'">
-        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Used Cars
-      </button>
-      <button class="cat-chip" onclick="window.location='browse.html?type=motorbikes'">
-        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h-4l-3 7"/><path d="M9 11h5l2-5h3"/></svg>
-        Motorbikes
-      </button>
-      <button class="cat-chip" onclick="window.location='browse.html?type=trucks'">
-        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-        Trucks &amp; Bakkies
-      </button>
-      <button class="cat-chip" onclick="window.location='browse.html?type=other'">
-        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Other Vehicles
-      </button>
-    </div>
-  </div>
-</section>
-
-<!-- ── Featured Listings ─────────────────── -->
-<section class="section">
+<!-- ── Featured Listings (tight — right below hero) ── -->
+<section class="section featured-tight">
   <div class="container">
     <div class="section-header">
       <div>
@@ -188,28 +164,8 @@
   </div>
 </section>
 
-<!-- ── Live Stats ─────────────────────────── -->
-<section class="section" style="padding-top:60px; padding-bottom:40px;">
-  <div class="container">
-    <div class="hero-stats" style="justify-content:center; margin-top:0;">
-      <div class="stat-item">
-        <strong id="stat-vehicles">—</strong>
-        <span>Vehicles Listed</span>
-      </div>
-      <div class="stat-item">
-        <strong id="stat-buyers">—</strong>
-        <span>Happy Buyers</span>
-      </div>
-      <div class="stat-item">
-        <strong id="stat-dealers">—</strong>
-        <span>Verified Dealers</span>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ── CTA ───────────────────────────────── -->
-<section class="section" style="padding-top:0;">
+<section class="section">
   <div class="container">
     <div class="cta-section">
       <div>
@@ -241,10 +197,10 @@
       <div class="footer-col">
         <h5>Browse</h5>
         <ul>
-          <li><a href="browse.html?type=new-cars">New Cars</a></li>
-          <li><a href="browse.html?type=used-cars">Used Cars</a></li>
-          <li><a href="browse.html?type=motorbikes">Motorbikes</a></li>
-          <li><a href="browse.html?type=trucks">Trucks &amp; Bakkies</a></li>
+          <li><a href="browse.html?type=new_car">New Cars</a></li>
+          <li><a href="browse.html?type=used_car">Used Cars</a></li>
+          <li><a href="browse.html?type=motorbike">Motorbikes</a></li>
+          <li><a href="browse.html?type=truck">Trucks &amp; Bakkies</a></li>
           <li><a href="browse.html?type=other">Other Vehicles</a></li>
         </ul>
       </div>
@@ -284,7 +240,18 @@
 <script src="js/api.js"></script>
 <script src="js/main.js"></script>
 <script>
-/* ── Global favourite toggle (used by featured cards on this page) ── */
+/* ── Hero search redirect ── */
+function doHeroSearch() {
+  const type = document.getElementById('hero-type').value;
+  const kw   = document.getElementById('hero-kw').value.trim();
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (kw)   params.set('kw', kw);
+  window.location.href = 'browse.html' + (params.toString() ? '?' + params.toString() : '');
+}
+document.getElementById('hero-kw')?.addEventListener('keydown', e => { if (e.key === 'Enter') doHeroSearch(); });
+
+/* ── Global favourite toggle ── */
 window.toggleSave = function(btn) {
   btn.classList.toggle('saved');
   const svg = btn.querySelector('svg');
@@ -299,33 +266,11 @@ window.toggleSave = function(btn) {
   }
 };
 
-/* ── Live stats — always real API data, never mock numbers ── */
-(async () => {
-  const API_BASE = 'https://pikcarz.vercel.app';
-  function fmt(n) {
-    if (n == null || isNaN(n)) return '0';
-    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k+';
-    return n.toString();
-  }
-  try {
-    const res = await fetch(`${API_BASE}/api/vehicles/public-stats`);
-    if (!res.ok) throw new Error('API error');
-    const d = await res.json();
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set('stat-vehicles', fmt(d.active_listings));
-    set('stat-buyers',   fmt(d.total_buyers  ?? 0));   // will be 0 until purchase tracking is added
-    set('stat-dealers',  fmt(d.verified_dealers ?? 0));
-  } catch (_) {
-    // On failure leave as '—' so no wrong numbers appear
-  }
-})();
-
 /* ── Featured listings ── */
 (async () => {
   const grid = document.getElementById('featured-grid');
-  const API_BASE = 'https://pikcarz.vercel.app';
   try {
-    const data = await api.getSilent('/api/vehicles', { page: 1, per_page: 8 });
+    const data = await api.getSilent('/api/vehicles', { page: 1, per_page: 8, status: 'active' });
     const vehicles = data?.vehicles || [];
     if (!vehicles.length) {
       grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">No listings yet — be the first to <a href="dashboard.html" style="color:var(--accent)">list your vehicle</a>!</p>';
@@ -333,9 +278,8 @@ window.toggleSave = function(btn) {
     }
     grid.innerHTML = vehicles.map(v => {
       const img = v.images?.[0] || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80';
-      const badge      = v.category === 'new_car' ? 'badge-new' : v.category === 'motorcycle' ? 'badge-bike' : v.category === 'truck' ? 'badge-truck' : 'badge-used';
-      const badgeLabel = v.category === 'new_car' ? 'New'       : v.category === 'motorcycle' ? 'Motorbike'  : v.category === 'truck' ? 'Truck'       : 'Used';
-      // Use contact_name for admin on-behalf listings, else seller_name
+      const badge      = v.category === 'new_car' ? 'badge-new' : v.category === 'motorbike' ? 'badge-bike' : v.category === 'truck' ? 'badge-truck' : 'badge-used';
+      const badgeLabel = v.category === 'new_car' ? 'New'       : v.category === 'motorbike' ? 'Motorbike'  : v.category === 'truck' ? 'Truck'       : 'Used';
       const seller   = v.contact_name || v.seller_name || 'Seller';
       const initials = seller.substring(0, 2).toUpperCase();
       return `
