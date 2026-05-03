@@ -15,19 +15,26 @@ from app.config import settings
 
 # NullPool: no persistent pool — each DB operation opens and closes its own
 # connection. Essential for serverless environments (Vercel + Neon).
-engine = create_engine(
-    settings.db_url,
-    poolclass=NullPool,
-)
+_db_url = settings.db_url
 
-# Session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+if _db_url:
+    engine = create_engine(_db_url, poolclass=NullPool)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+else:
+    engine = None
+    SessionLocal = None
 
 # Base class for models
 Base = declarative_base()
 
 # Dependency for routes
 def get_db():
+    if SessionLocal is None:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=503,
+            detail="Database is not configured. Set DATABASE_URL or POSTGRES_PRISMA_URL environment variable."
+        )
     db = SessionLocal()
     try:
         yield db

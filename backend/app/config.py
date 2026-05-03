@@ -57,8 +57,8 @@ class Settings(BaseSettings):
         )
         return _clean_db_url(raw)
 
-    # Security
-    SECRET_KEY: str
+    # Security — SECRET_KEY must be set in production; fallback is dev-only
+    SECRET_KEY: str = "dev-only-insecure-key-set-SECRET_KEY-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days
 
@@ -66,20 +66,20 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "https://pikcarz.co.za"
     BACKEND_URL: str = "https://pikcarz.vercel.app"
 
-    # Cloudinary
-    CLOUDINARY_CLOUD_NAME: str
-    CLOUDINARY_API_KEY: str
-    CLOUDINARY_API_SECRET: str
+    # Cloudinary — optional; image upload will be unavailable if not set
+    CLOUDINARY_CLOUD_NAME: Optional[str] = None
+    CLOUDINARY_API_KEY: Optional[str] = None
+    CLOUDINARY_API_SECRET: Optional[str] = None
 
-    # PayFast
-    PAYFAST_MERCHANT_ID: str
-    PAYFAST_MERCHANT_KEY: str
-    PAYFAST_PASSPHRASE: str
-    PAYFAST_MODE: str = "live"
+    # PayFast — optional; payments will be unavailable if not set
+    PAYFAST_MERCHANT_ID: Optional[str] = None
+    PAYFAST_MERCHANT_KEY: Optional[str] = None
+    PAYFAST_PASSPHRASE: Optional[str] = None
+    PAYFAST_MODE: str = "sandbox"
 
     # Admin
     ADMIN_EMAIL: str = "admin@pikcarz.co.za"
-    ADMIN_PASSWORD: str
+    ADMIN_PASSWORD: Optional[str] = None
 
     class Config:
         env_file = ".env"

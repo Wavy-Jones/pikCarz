@@ -7,18 +7,21 @@ from fastapi import UploadFile, HTTPException
 from typing import List
 from app.config import settings
 
-# Configure Cloudinary
-cloudinary.config(
-    cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-    api_key=settings.CLOUDINARY_API_KEY,
-    api_secret=settings.CLOUDINARY_API_SECRET
-)
+def _configure_cloudinary():
+    if not all([settings.CLOUDINARY_CLOUD_NAME, settings.CLOUDINARY_API_KEY, settings.CLOUDINARY_API_SECRET]):
+        raise HTTPException(status_code=503, detail="Image upload is not configured on this server.")
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+    )
 
 async def upload_vehicle_image(file: UploadFile, vehicle_id: int) -> str:
     """
     Upload a single vehicle image to Cloudinary
     Returns the secure URL of the uploaded image
     """
+    _configure_cloudinary()
     try:
         # Read file content
         contents = await file.read()

@@ -62,6 +62,10 @@ async def startup_db():
         from app.database import Base, engine
         from sqlalchemy import text
 
+        if engine is None:
+            print("[startup] No database URL configured — skipping table creation.")
+            return
+
         # Create any missing tables (idempotent)
         Base.metadata.create_all(bind=engine)
 
