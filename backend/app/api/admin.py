@@ -323,4 +323,4 @@ def admin_delete_user(user_id: int, current_admin: User = Depends(get_current_ad
     # Vehicles cascade-delete via FK; payments stay for audit trail
     db.delete(user)
     db.commit()
-    return {"message": f"User {user.email} deleted"}}
+    return {"message": f"User {user.email} deleted"}
