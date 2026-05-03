@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "backend/api/index.py": {
+      "runtime": "python3.11",
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/api/index"
+    }
+  ]
+}
