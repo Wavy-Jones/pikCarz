@@ -1079,7 +1079,7 @@ async function loadPlans() {
         ? `<p style="font-size:0.78rem;color:#f59e0b;font-weight:600;margin-bottom:12px;line-height:1.5">⏳ Price increases to R2,399/month after first 100 subscribers.</p>`
         : '';
 
-      const btnLabel = isFree ? 'Select Free Plan' : trialBtn ? `Start ${trialBtn} Trial` : 'Start Free Trial';
+      const btnLabel = isFree ? 'Select Free Plan' : 'Start Free Trial';
       const cardBorder = isPopular ? 'border-color:#f59e0b;' : '';
 
       return `
