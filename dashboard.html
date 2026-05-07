@@ -540,6 +540,126 @@
   </div>
 </div>
 
+<!-- ── Edit Listing Modal ───────────────────────────── -->
+<div id="edit-modal" class="modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+    <h2>Edit Listing</h2>
+    <input type="hidden" id="edit-vehicle-id" />
+    <form id="edit-form" onsubmit="handleEdit(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Make *</label>
+          <select id="edit-make" required>
+            <option value="">Select make…</option>
+            <option>Audi</option><option>BMW</option><option>Chery</option><option>Chevrolet</option><option>Citroen</option><option>DFSK</option><option>Dodge</option><option>Ferrari</option><option>Ford</option><option>GWM</option><option>Haval</option><option>Honda</option><option>Hyundai</option><option>Isuzu</option><option>Jaguar</option><option>Jeep</option><option>Kia</option><option>Land Rover</option><option>Lexus</option><option>Mahindra</option><option>Mazda</option><option>Mercedes-Benz</option><option>Mitsubishi</option><option>Nissan</option><option>Opel</option><option>Peugeot</option><option>Porsche</option><option>Renault</option><option>Skoda</option><option>Ssangyong</option><option>Subaru</option><option>Suzuki</option><option>Toyota</option><option>Volkswagen</option><option>Volvo</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Model *</label>
+          <input type="text" id="edit-model" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Year *</label>
+          <select id="edit-year" required>
+            <option value="">Select year…</option>
+            <option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option><option>2010</option><option>2009</option><option>2008</option><option>2007</option><option>2006</option><option>2005</option><option>2004</option><option>2003</option><option>2002</option><option>2001</option><option>2000</option><option>1999</option><option>1998</option><option>1997</option><option>1996</option><option>1995</option><option>1994</option><option>1993</option><option>1992</option><option>1991</option><option>1990</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Price (R) *</label>
+          <input type="number" id="edit-price" min="0" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mileage (km)</label>
+          <input type="number" id="edit-mileage" min="0">
+        </div>
+        <div class="form-group">
+          <label>Colour</label>
+          <input type="text" id="edit-color">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Transmission</label>
+          <select id="edit-transmission">
+            <option value="Automatic">Automatic</option>
+            <option value="Manual">Manual</option>
+            <option value="Semi-Automatic">Semi-Automatic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fuel Type</label>
+          <select id="edit-fuel">
+            <option value="Petrol">Petrol</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Electric">Electric</option>
+            <option value="Hybrid">Hybrid</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Province</label>
+          <select id="edit-province">
+            <option value="Gauteng">Gauteng</option><option value="Western Cape">Western Cape</option><option value="KwaZulu-Natal">KwaZulu-Natal</option><option value="Eastern Cape">Eastern Cape</option><option value="Limpopo">Limpopo</option><option value="Mpumalanga">Mpumalanga</option><option value="North West">North West</option><option value="Free State">Free State</option><option value="Northern Cape">Northern Cape</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" id="edit-city">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Listing Title *</label>
+        <input type="text" id="edit-title" required>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="edit-description" rows="4"></textarea>
+      </div>
+
+      <!-- Existing photos -->
+      <div class="form-group">
+        <label>Current Photos <span style="color:var(--muted);font-weight:400;font-size:0.8rem">(click ✕ to remove)</span></label>
+        <div id="edit-existing-images" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+        <p id="edit-no-images" style="color:var(--muted);font-size:0.85rem;display:none">No photos uploaded yet.</p>
+      </div>
+
+      <!-- Add new photos -->
+      <div class="form-group">
+        <label>Add New Photos (max 10 total)</label>
+        <input type="file" id="edit-images" multiple accept="image/*">
+        <p class="form-hint">New photos will be added to your existing ones.</p>
+      </div>
+
+      <div class="form-error" id="edit-error"></div>
+      <div class="form-actions">
+        <button type="button" onclick="closeEditModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="edit-submit-btn" class="btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Subscribe Confirm Modal ───────────────────── -->
+<div id="sub-confirm-modal" class="modal">
+  <div class="modal-content" style="max-width:440px;text-align:center">
+    <button class="modal-close" onclick="closeSubConfirm()">&times;</button>
+    <div style="font-size:2.5rem;margin-bottom:12px">🚀</div>
+    <h2 style="margin-bottom:8px" id="sub-confirm-title">Confirm Subscription</h2>
+    <p style="color:var(--muted);margin-bottom:24px;line-height:1.6" id="sub-confirm-msg"></p>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="closeSubConfirm()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
+      <button id="sub-confirm-btn" class="btn-primary" style="flex:1;padding:12px">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script src="js/api.js"></script>
@@ -761,7 +881,155 @@ async function handleCreate(e) {
 }
 
 function editListing(id) {
-  showToast('Edit functionality coming soon!', 'info');
+  openEditModal(id);
+}
+
+let _editExistingImages = [];
+
+async function openEditModal(id) {
+  document.getElementById('edit-vehicle-id').value = id;
+  document.getElementById('edit-error').style.display = 'none';
+  document.getElementById('edit-submit-btn').disabled = false;
+  document.getElementById('edit-submit-btn').textContent = 'Save Changes';
+
+  try {
+    const v = await api.getSilent(`/api/vehicles/${id}`);
+    // Populate fields
+    document.getElementById('edit-make').value         = v.make        || '';
+    document.getElementById('edit-model').value        = v.model       || '';
+    document.getElementById('edit-year').value         = v.year        || '';
+    document.getElementById('edit-price').value        = v.price       || '';
+    document.getElementById('edit-mileage').value      = v.mileage     || '';
+    document.getElementById('edit-color').value        = v.color       || '';
+    document.getElementById('edit-transmission').value = v.transmission|| 'Automatic';
+    document.getElementById('edit-fuel').value         = v.fuel_type   || 'Petrol';
+    document.getElementById('edit-province').value     = v.province    || 'Gauteng';
+    document.getElementById('edit-city').value         = v.city        || '';
+    document.getElementById('edit-title').value        = v.title       || '';
+    document.getElementById('edit-description').value  = v.description || '';
+
+    // Render existing images
+    _editExistingImages = v.images ? [...v.images] : [];
+    renderEditImages();
+
+    document.getElementById('edit-images').value = '';
+    document.getElementById('edit-modal').style.display = 'flex';
+  } catch (err) {
+    showToast('Could not load listing details: ' + err.message, 'error');
+  }
+}
+
+function renderEditImages() {
+  const container = document.getElementById('edit-existing-images');
+  const noImgMsg  = document.getElementById('edit-no-images');
+  if (!_editExistingImages.length) {
+    container.innerHTML = '';
+    noImgMsg.style.display = 'block';
+    return;
+  }
+  noImgMsg.style.display = 'none';
+  container.innerHTML = _editExistingImages.map((url, i) => `
+    <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+      <img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />
+      <button type="button" onclick="removeEditImage(${i})"
+        style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.75rem;cursor:pointer;line-height:20px;text-align:center;padding:0">
+        ✕
+      </button>
+    </div>`).join('');
+}
+
+function removeEditImage(index) {
+  _editExistingImages.splice(index, 1);
+  renderEditImages();
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+}
+
+async function handleEdit(e) {
+  e.preventDefault();
+  const errDiv = document.getElementById('edit-error');
+  const btn    = document.getElementById('edit-submit-btn');
+  errDiv.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const id = document.getElementById('edit-vehicle-id').value;
+
+  try {
+    let images = [..._editExistingImages];
+
+    // Upload any new photos
+    const imgInput = document.getElementById('edit-images');
+    if (imgInput.files.length > 0) {
+      btn.textContent = `Uploading photo 1 of ${imgInput.files.length}…`;
+      const sigRes = await api.post('/api/vehicles/upload-signature');
+
+      function compressImg(file) {
+        return new Promise(resolve => {
+          const img = new Image(), url = URL.createObjectURL(file);
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            const MAX = 1200;
+            let { width, height } = img;
+            if (width > MAX || height > MAX) {
+              if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+              else { width = Math.round(width * MAX / height); height = MAX; }
+            }
+            const c = document.createElement('canvas');
+            c.width = width; c.height = height;
+            c.getContext('2d').drawImage(img, 0, 0, width, height);
+            c.toBlob(blob => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', 0.82);
+          };
+          img.onerror = () => resolve(file);
+          img.src = url;
+        });
+      }
+
+      const files = Array.from(imgInput.files);
+      for (let i = 0; i < files.length; i++) {
+        if (images.length >= 10) break;
+        btn.textContent = `Uploading photo ${i + 1} of ${files.length}…`;
+        const compressed = await compressImg(files[i]);
+        const fd = new FormData();
+        fd.append('file',      compressed);
+        fd.append('api_key',   sigRes.api_key);
+        fd.append('timestamp', sigRes.timestamp);
+        fd.append('signature', sigRes.signature);
+        fd.append('folder',    sigRes.folder);
+        const res  = await fetch(`https://api.cloudinary.com/v1_1/${sigRes.cloud_name}/image/upload`, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.error) throw new Error(`Photo ${i + 1} failed: ${data.error.message}`);
+        images.push(data.secure_url);
+      }
+    }
+
+    btn.textContent = 'Saving changes…';
+    await api.put(`/api/vehicles/${id}`, {
+      make:         document.getElementById('edit-make').value,
+      model:        document.getElementById('edit-model').value,
+      year:         parseInt(document.getElementById('edit-year').value),
+      price:        parseFloat(document.getElementById('edit-price').value),
+      mileage:      parseInt(document.getElementById('edit-mileage').value) || null,
+      color:        document.getElementById('edit-color').value,
+      transmission: document.getElementById('edit-transmission').value,
+      fuel_type:    document.getElementById('edit-fuel').value,
+      province:     document.getElementById('edit-province').value,
+      city:         document.getElementById('edit-city').value,
+      title:        document.getElementById('edit-title').value,
+      description:  document.getElementById('edit-description').value,
+      images,
+    });
+
+    closeEditModal();
+    showToast('Listing updated successfully!', 'success');
+    loadMyListings();
+  } catch (err) {
+    errDiv.textContent = err.message || 'Failed to save changes. Please try again.';
+    errDiv.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
 }
 
 async function deleteListing(id) {
@@ -820,7 +1088,7 @@ async function loadPlans() {
         <div class="plan-price">R ${plan.price}<span style="font-size:0.85rem;font-weight:400;color:var(--muted)">/mo</span></div>
         ${dealerProNote}
         <ul class="plan-features">${(plan.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
-        <button onclick="subscribePlan('${plan.tier}')" class="btn-primary" style="width:100%">${btnLabel}</button>
+        <button onclick="subscribePlan('${plan.tier}', '${plan.name}', '${trialLabel || ''}')" class="btn-primary" style="width:100%">${btnLabel}</button>
       </div>`;
     }).join('');
   } catch {
@@ -828,7 +1096,25 @@ async function loadPlans() {
   }
 }
 
-async function subscribePlan(tier) {
+function openSubConfirm(tier, planName, trialLabel) {
+  const isTrial = !!trialLabel;
+  document.getElementById('sub-confirm-title').textContent = isTrial
+    ? `Start ${trialLabel} Free Trial`
+    : `Subscribe to ${planName}`;
+  document.getElementById('sub-confirm-msg').textContent = isTrial
+    ? `You're about to start your ${trialLabel} free trial of the ${planName} plan. No payment needed — your trial begins immediately.`
+    : `You'll be redirected to PayFast to complete payment for the ${planName} plan.`;
+  const confirmBtn = document.getElementById('sub-confirm-btn');
+  confirmBtn.textContent = isTrial ? '🎉 Start Free Trial' : 'Proceed to Payment';
+  confirmBtn.onclick = () => { closeSubConfirm(); doSubscribe(tier); };
+  document.getElementById('sub-confirm-modal').style.display = 'flex';
+}
+
+function closeSubConfirm() {
+  document.getElementById('sub-confirm-modal').style.display = 'none';
+}
+
+async function doSubscribe(tier) {
   try {
     const res = await api.post(`/api/subscriptions/subscribe/${tier}`);
     if (res.payment_url) {
@@ -843,9 +1129,15 @@ async function subscribePlan(tier) {
   }
 }
 
+async function subscribePlan(tier, planName, trialLabel) {
+  openSubConfirm(tier, planName, trialLabel);
+}
+
 window.addEventListener('click', e => {
-  if (e.target.id === 'create-modal') closeCreateModal();
-  if (e.target.id === 'plans-modal')  closePlansModal();
+  if (e.target.id === 'create-modal')      closeCreateModal();
+  if (e.target.id === 'plans-modal')       closePlansModal();
+  if (e.target.id === 'edit-modal')        closeEditModal();
+  if (e.target.id === 'sub-confirm-modal') closeSubConfirm();
 });
 </script>
 </body>

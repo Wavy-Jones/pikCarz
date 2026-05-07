@@ -39,6 +39,7 @@ class VehicleUpdate(BaseModel):
     description: Optional[str] = None
     province: Optional[str] = None
     city: Optional[str] = None
+    images: Optional[List[str]] = None  # Full replacement of image array
     # Admin can update seller contact info via the edit modal
     contact_name:  Optional[str] = None
     contact_phone: Optional[str] = None

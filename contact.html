@@ -105,12 +105,12 @@
           <div style="font-size:0.75rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">For Dealers</div>
           <h4 style="font-size:1.1rem;margin-bottom:8px">Register Your Dealership</h4>
           <p style="font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:16px">Get access to premium dealer tools, bulk listing uploads, verified dealer badges and advanced analytics.</p>
-          <a href="#" class="btn-primary" style="font-size:0.85rem;padding:10px 18px">Dealer Enquiry →</a>
+          <a href="#contact-form" onclick="dealerEnquiry(event)" class="btn-primary" style="font-size:0.85rem;padding:10px 18px">Dealer Enquiry →</a>
         </div>
       </div>
 
       <!-- Contact Form -->
-      <div class="contact-form fade-in delay-2">
+      <div id="contact-form" class="contact-form fade-in delay-2">
         <h3 style="margin-bottom:24px">Send Us a Message</h3>
         <form onsubmit="return false">
           <div class="form-row">
@@ -217,5 +217,24 @@
 
 <script src="js/auth-state.js"></script>
 <script src="js/main.js"></script>
+<script>
+function dealerEnquiry(e) {
+  e.preventDefault();
+  const formSection = document.getElementById('contact-form');
+  if (formSection) {
+    formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Pre-select "Vehicle Dealer" in the dropdown
+    setTimeout(() => {
+      const select = document.getElementById('user-type');
+      const subject = document.getElementById('subject');
+      if (select) select.value = 'Vehicle Dealer';
+      if (subject && !subject.value) subject.value = 'Dealer Registration Enquiry';
+      // Focus the first name field
+      const firstName = document.getElementById('first-name');
+      if (firstName) firstName.focus();
+    }, 400);
+  }
+}
+</script>
 </body>
 </html>
