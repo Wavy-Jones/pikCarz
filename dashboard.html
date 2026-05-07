@@ -1058,12 +1058,14 @@ async function loadPlans() {
       const isPremium = plan.tier === 'premium';
 
       const trialMonthsMap = {
-        'standard':     '1 month',
-        'premium':      '2 months',
-        'dealer_basic': '3 months',
-        'dealer_pro':   '3 months',
+        'standard':     { label: '1 month',  btn: '1-Month'  },
+        'premium':      { label: '2 months', btn: '2-Month'  },
+        'dealer_basic': { label: '3 months', btn: '3-Month'  },
+        'dealer_pro':   { label: '3 months', btn: '3-Month'  },
       };
-      const trialLabel = trialMonthsMap[plan.tier];
+      const trialEntry = trialMonthsMap[plan.tier];
+      const trialLabel = trialEntry?.label;
+      const trialBtn   = trialEntry?.btn;
       let trialBadge = '';
       if (!isFree && trialLabel) {
         trialBadge = `<div style="display:inline-block;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:100px;margin-bottom:14px">✅ ${trialLabel} FREE trial</div>`;
@@ -1077,7 +1079,7 @@ async function loadPlans() {
         ? `<p style="font-size:0.78rem;color:#f59e0b;font-weight:600;margin-bottom:12px;line-height:1.5">⏳ Price increases to R2,399/month after first 100 subscribers.</p>`
         : '';
 
-      const btnLabel = isFree ? 'Select Free Plan' : trialLabel ? `Start ${trialLabel.charAt(0).toUpperCase() + trialLabel.slice(1)} Trial` : 'Start Free Trial';
+      const btnLabel = isFree ? 'Select Free Plan' : trialBtn ? `Start ${trialBtn} Trial` : 'Start Free Trial';
       const cardBorder = isPopular ? 'border-color:#f59e0b;' : '';
 
       return `
