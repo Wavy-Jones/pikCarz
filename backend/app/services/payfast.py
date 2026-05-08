@@ -52,30 +52,24 @@ def generate_payment_url(payment_id: int, amount: float, item_name: str, user_em
 
 def generate_signature(data: dict, passphrase: str = None) -> str:
     """
-    Generate PayFast signature for data validation
-    
-    PayFast requires a signature to verify the request hasn't been tampered with
+    Generate PayFast signature.
+    Parameters must be in the original insertion order, not sorted.
     """
     if passphrase is None:
         passphrase = settings.PAYFAST_PASSPHRASE
-    
-    # Create parameter string
-    param_string = ""
-    for key in sorted(data.keys()):
+
+    # Build param string preserving insertion order
+    param_parts = []
+    for key, value in data.items():
         if key != 'signature':
-            param_string += f'{key}={urlencode({key: data[key]})}&'
-    
-    # Remove last ampersand
-    param_string = param_string.rstrip('&')
-    
-    # Add passphrase if provided
+            param_parts.append(f'{key}={urlencode({key: str(value)})[len(key)+1:]}')
+
+    param_string = '&'.join(param_parts)
+
     if passphrase:
         param_string += f'&passphrase={passphrase}'
-    
-    # Generate MD5 hash
-    signature = hashlib.md5(param_string.encode()).hexdigest()
-    
-    return signature
+
+    return hashlib.md5(param_string.encode()).hexdigest()
 
 def verify_payfast_signature(data: dict) -> bool:
     """
