@@ -253,7 +253,7 @@ def get_my_subscription(current_user: User = Depends(get_current_user)):
         "tier": current_user.subscription_tier.value,
         "expires": current_user.subscription_expires,
         "is_active": (
-            current_user.subscription_expires > datetime.utcnow()
+            current_user.subscription_expires.replace(tzinfo=None) > datetime.utcnow()
             if current_user.subscription_expires else False
         ),
     }
