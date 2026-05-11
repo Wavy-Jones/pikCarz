@@ -23,25 +23,21 @@ def generate_payment_url(payment_id: int, amount: float, item_name: str, user_em
     else:
         payfast_url = "https://www.payfast.co.za/eng/process"
     
-    # Build payment data - exclude empty values as PayFast signature must not include them
+    # Build payment data in PayFast's expected parameter order
     name_parts = user_name.strip().split()
-    payment_data = {
-        'merchant_id': str(merchant_id),
-        'merchant_key': str(merchant_key),
-        'return_url': f'{settings.FRONTEND_URL}/payment-success',
-        'cancel_url': f'{settings.FRONTEND_URL}/payment-cancelled',
-        'notify_url': f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast',
-        'name_first': name_parts[0],
-        'email_address': user_email,
-        'amount': f'{amount:.2f}',
-        'item_name': item_name,
-        'm_payment_id': str(payment_id),
-        'email_confirmation': '1',
-        'confirmation_address': user_email,
-    }
-    # Only add name_last if it exists
+    payment_data = {'merchant_id': str(merchant_id), 'merchant_key': str(merchant_key)}
+    payment_data['return_url']   = f'{settings.FRONTEND_URL}/payment-success'
+    payment_data['cancel_url']   = f'{settings.FRONTEND_URL}/payment-cancelled'
+    payment_data['notify_url']   = f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast'
+    payment_data['name_first']   = name_parts[0]
     if len(name_parts) > 1:
-        payment_data['name_last'] = name_parts[-1]
+        payment_data['name_last'] = ' '.join(name_parts[1:])  # right after name_first
+    payment_data['email_address']       = user_email
+    payment_data['amount']              = f'{amount:.2f}'
+    payment_data['item_name']           = item_name
+    payment_data['m_payment_id']        = str(payment_id)
+    payment_data['email_confirmation']  = '1'
+    payment_data['confirmation_address'] = user_email
     
     # Generate signature
     signature = generate_signature(payment_data)
