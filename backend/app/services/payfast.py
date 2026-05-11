@@ -59,15 +59,20 @@ def generate_signature(data: dict, passphrase: str = None) -> str:
 
     param_parts = []
     for key, value in data.items():
-        if key != 'signature':
-            param_parts.append(f'{key}={quote_plus(str(value))}')
+        if key != 'signature' and str(value).strip() != '':
+            param_parts.append(f'{key}={quote_plus(str(value).strip())}')
 
     param_string = '&'.join(param_parts)
 
-    if passphrase:
-        param_string += f'&passphrase={quote_plus(passphrase)}'
+    if passphrase and passphrase.strip():
+        param_string += f'&passphrase={quote_plus(passphrase.strip())}'
 
-    return hashlib.md5(param_string.encode()).hexdigest()
+    print(f"PAYFAST_DEBUG param_string: {param_string}")
+    print(f"PAYFAST_DEBUG passphrase_len: {len(passphrase.strip()) if passphrase else 0}")
+    print(f"PAYFAST_DEBUG mode: {settings.PAYFAST_MODE}")
+    sig = hashlib.md5(param_string.encode()).hexdigest()
+    print(f"PAYFAST_DEBUG signature: {sig}")
+    return sig
 
 def verify_payfast_signature(data: dict) -> bool:
     """
