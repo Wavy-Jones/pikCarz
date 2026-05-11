@@ -254,6 +254,16 @@
         <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller WhatsApp</label><input type="tel" id="ev-contact-phone" placeholder="e.g. 083 943 8885" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
       </div>
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description</label><textarea id="ev-description" rows="4" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea></div>
+      <!-- Photos -->
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Current Photos <span style="color:var(--muted);font-weight:400;font-size:0.78rem">(click ✕ to remove)</span></label>
+        <div id="ev-existing-images" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+        <p id="ev-no-images" style="color:var(--muted);font-size:0.85rem;display:none">No photos uploaded yet.</p>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Add New Photos <span style="color:var(--muted);font-weight:400;font-size:0.78rem">(max 10 total)</span></label>
+        <input type="file" id="ev-new-images" multiple accept="image/*" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+      </div>
       <div id="edit-vehicle-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
       <div style="display:flex;gap:12px;margin-top:8px">
         <button type="button" onclick="closeEditModal()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
@@ -392,8 +402,18 @@
 
   /* ── Vehicle card builder ─────────────────── */
   const statusColour = { active: '#10b981', pending: '#f59e0b', rejected: '#ef4444', expired: '#6b7280', sold: '#3b82f6' };
+  const _vehicleImagesMap = {};
+  const _vehicleDataMap   = {};
+
+  function openEditById(id) {
+    const v = _vehicleDataMap[id];
+    if (!v) return;
+    openEditModal(id, v.title||'', v.price, v.mileage||0, v.city||'', v.province||'Gauteng', (v.description||''), v.contact_name||'', v.contact_phone||'', v.images||[]);
+  }
 
   function vehicleCard(v, context) {
+    _vehicleImagesMap[v.id] = v.images || [];
+    _vehicleDataMap[v.id]   = v;
     const isPending = v.status === 'pending';
     let sellerDisplay;
     if (v.contact_name) {
@@ -412,7 +432,7 @@
       : '<p style="color:var(--muted);font-size:0.82rem;margin-top:6px">📷 No photos</p>';
     const actions = `
       <div class="vehicle-actions">
-        <button class="btn-edit-v" onclick="openEditModal(${v.id}, '${(v.title||'').replace(/'/g,"\\'")}', ${v.price}, ${v.mileage||0}, '${(v.city||'').replace(/'/g,"\\'")}', '${v.province||'Gauteng'}', '${(v.description||'').replace(/'/g,"\\'").replace(/\n/g,' ')}', '${(v.contact_name||'').replace(/'/g,"\\'")}', '${(v.contact_phone||'').replace(/'/g,"\\'")}')">✎ Edit</button>
+        <button class="btn-edit-v" onclick="openEditById(${v.id})">✎ Edit</button>
         ${isPending ? `<button class="btn-approve" onclick="approveVehicle(${v.id})">✓ Approve</button>` : ''}
         ${isPending ? `<button class="btn-reject"  onclick="rejectVehicle(${v.id})">✗ Reject</button>`  : ''}
         <button class="btn-del-v" onclick="adminDeleteVehicle(${v.id})">🗑 Delete</button>
@@ -505,7 +525,29 @@
   }
 
   /* ── Edit Modal ───────────────────────────── */
-  function openEditModal(id, title, price, mileage, city, province, description, contactName, contactPhone) {
+  let _adminEditImages = [];
+
+  function renderAdminEditImages() {
+    const container = document.getElementById('ev-existing-images');
+    const noMsg     = document.getElementById('ev-no-images');
+    if (!_adminEditImages.length) { container.innerHTML = ''; noMsg.style.display = 'block'; return; }
+    noMsg.style.display = 'none';
+    container.innerHTML = _adminEditImages.map((url, i) => `
+      <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+        <img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />
+        <button type="button" onclick="removeAdminEditImage(${i})"
+          style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.75rem;cursor:pointer;line-height:20px;text-align:center;padding:0">
+          ✕
+        </button>
+      </div>`).join('');
+  }
+
+  function removeAdminEditImage(index) {
+    _adminEditImages.splice(index, 1);
+    renderAdminEditImages();
+  }
+
+  function openEditModal(id, title, price, mileage, city, province, description, contactName, contactPhone, images) {
     document.getElementById('edit-vehicle-id').value = id;
     document.getElementById('edit-vehicle-subtitle').textContent = `Editing listing #${id}`;
     document.getElementById('ev-title').value = title;
@@ -520,6 +562,9 @@
       if (prov.options[i].value === province) { prov.selectedIndex = i; break; }
     }
     document.getElementById('edit-vehicle-error').style.display = 'none';
+    document.getElementById('ev-new-images').value = '';
+    _adminEditImages = Array.isArray(images) ? [...images] : [];
+    renderAdminEditImages();
     document.getElementById('edit-vehicle-modal').style.display = 'flex';
   }
 
@@ -545,6 +590,32 @@
       contact_phone: document.getElementById('ev-contact-phone').value.trim() || null,
     };
     try {
+      // Upload any new photos first
+      let images = [..._adminEditImages];
+      const imgInput = document.getElementById('ev-new-images');
+      if (imgInput.files.length > 0) {
+        btn.textContent = `Uploading photo 1 of ${imgInput.files.length}…`;
+        const sigRes = await fetch(`${API_BASE}/api/vehicles/upload-signature`, { method:'POST', headers: authHeaders() });
+        if (!sigRes.ok) throw new Error('Could not get upload credentials.');
+        const sig = await sigRes.json();
+        const files = Array.from(imgInput.files);
+        for (let i = 0; i < files.length; i++) {
+          if (images.length >= 10) break;
+          btn.textContent = `Uploading photo ${i+1} of ${files.length}…`;
+          const fd = new FormData();
+          fd.append('file', files[i]);
+          fd.append('api_key', sig.api_key);
+          fd.append('timestamp', sig.timestamp);
+          fd.append('signature', sig.signature);
+          fd.append('folder', sig.folder);
+          const r = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, { method:'POST', body:fd });
+          const d = await r.json();
+          if (d.error) throw new Error(`Photo ${i+1} failed: ${d.error.message}`);
+          images.push(d.secure_url);
+        }
+      }
+      payload.images = images;
+      btn.textContent = 'Saving…';
       const res = await fetch(`${API_BASE}/api/admin/vehicles/${id}/edit`, {
         method: 'PUT',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
