@@ -10,7 +10,7 @@ from app.models.payment import Payment
 from app.models import SubscriptionTier, PaymentStatus
 from app.schemas.subscription import SubscriptionPlan, PaymentCreate, PaymentResponse, PayFastWebhook
 from app.core.deps import get_current_user
-from app.services.payfast import generate_payment_url, verify_payfast_signature
+from app.services.payfast import generate_payment_data, verify_payfast_signature
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
@@ -200,7 +200,7 @@ async def subscribe_to_plan(
     db.commit()
     db.refresh(payment)
 
-    payment_url = generate_payment_url(
+    payment_info = generate_payment_data(
         payment_id=payment.id,
         amount=plan["price"],
         item_name=plan["name"],
@@ -209,7 +209,8 @@ async def subscribe_to_plan(
     )
 
     return {
-        "payment_url": payment_url,
+        "payment_url": payment_info["url"],
+        "payment_params": payment_info["params"],
         "payment_id": payment.id,
         "amount": plan["price"],
         "tier": tier,

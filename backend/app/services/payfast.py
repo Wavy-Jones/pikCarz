@@ -5,49 +5,43 @@ import hashlib
 from urllib.parse import urlencode, quote_plus
 from app.config import settings
 
-def generate_payment_url(payment_id: int, amount: float, item_name: str, user_email: str, user_name: str) -> str:
+def generate_payment_data(payment_id: int, amount: float, item_name: str, user_email: str, user_name: str) -> dict:
     """
-    Generate PayFast payment URL
-    
-    PayFast requires specific parameters to be sent
-    Returns the payment URL that user should be redirected to
+    Generate PayFast payment data for POST form submission.
+    Returns the PayFast URL and all signed parameters.
     """
-    
-    # PayFast merchant details (from environment variables)
-    merchant_id = settings.PAYFAST_MERCHANT_ID
+    merchant_id  = settings.PAYFAST_MERCHANT_ID
     merchant_key = settings.PAYFAST_MERCHANT_KEY
-    
-    # PayFast URLs
+
     if settings.PAYFAST_MODE == "sandbox":
         payfast_url = "https://sandbox.payfast.co.za/eng/process"
     else:
         payfast_url = "https://www.payfast.co.za/eng/process"
-    
-    # Build payment data in PayFast's expected parameter order
+
     name_parts = user_name.strip().split()
     payment_data = {'merchant_id': str(merchant_id), 'merchant_key': str(merchant_key)}
-    payment_data['return_url']   = f'{settings.FRONTEND_URL}/payment-success'
-    payment_data['cancel_url']   = f'{settings.FRONTEND_URL}/payment-cancelled'
-    payment_data['notify_url']   = f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast'
-    payment_data['name_first']   = name_parts[0]
+    payment_data['return_url']            = f'{settings.FRONTEND_URL}/payment-success'
+    payment_data['cancel_url']            = f'{settings.FRONTEND_URL}/payment-cancelled'
+    payment_data['notify_url']            = f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast'
+    payment_data['name_first']            = name_parts[0]
     if len(name_parts) > 1:
-        payment_data['name_last'] = ' '.join(name_parts[1:])  # right after name_first
-    payment_data['email_address']       = user_email
-    payment_data['amount']              = f'{amount:.2f}'
-    payment_data['item_name']           = item_name
-    payment_data['m_payment_id']        = str(payment_id)
-    payment_data['email_confirmation']  = '1'
-    payment_data['confirmation_address'] = user_email
-    
-    # Generate signature
-    signature = generate_signature(payment_data)
-    payment_data['signature'] = signature
-    
-    # Build payment URL
-    query_string = urlencode(payment_data)
-    payment_url = f'{payfast_url}?{query_string}'
-    
-    return payment_url
+        payment_data['name_last']         = ' '.join(name_parts[1:])
+    payment_data['email_address']         = user_email
+    payment_data['amount']                = f'{amount:.2f}'
+    payment_data['item_name']             = item_name
+    payment_data['m_payment_id']          = str(payment_id)
+    payment_data['email_confirmation']    = '1'
+    payment_data['confirmation_address']  = user_email
+
+    payment_data['signature'] = generate_signature(payment_data)
+
+    return {'url': payfast_url, 'params': payment_data}
+
+
+def generate_payment_url(payment_id: int, amount: float, item_name: str, user_email: str, user_name: str) -> str:
+    """Legacy GET URL method — kept for compatibility."""
+    data = generate_payment_data(payment_id, amount, item_name, user_email, user_name)
+    return data['url'] + '?' + urlencode(data['params'])
 
 def generate_signature(data: dict, passphrase: str = None) -> str:
     """

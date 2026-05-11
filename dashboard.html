@@ -1119,8 +1119,20 @@ function closeSubConfirm() {
 async function doSubscribe(tier) {
   try {
     const res = await api.post(`/api/subscriptions/subscribe/${tier}`);
-    if (res.payment_url) {
-      window.location.href = res.payment_url;
+    if (res.payment_url && res.payment_params) {
+      // POST form to PayFast (recommended method — avoids GET signature issues)
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = res.payment_url;
+      for (const [key, value] of Object.entries(res.payment_params)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
     } else if (res.is_trial || res.expires) {
       closePlansModal();
       showToast(res.message || '🎉 Free trial activated!', 'success');
