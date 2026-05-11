@@ -2,7 +2,7 @@
 PayFast payment gateway integration
 """
 import hashlib
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote_plus
 from app.config import settings
 
 def generate_payment_url(payment_id: int, amount: float, item_name: str, user_email: str, user_name: str) -> str:
@@ -23,22 +23,25 @@ def generate_payment_url(payment_id: int, amount: float, item_name: str, user_em
     else:
         payfast_url = "https://www.payfast.co.za/eng/process"
     
-    # Build payment data
+    # Build payment data - exclude empty values as PayFast signature must not include them
+    name_parts = user_name.strip().split()
     payment_data = {
-        'merchant_id': merchant_id,
-        'merchant_key': merchant_key,
+        'merchant_id': str(merchant_id),
+        'merchant_key': str(merchant_key),
         'return_url': f'{settings.FRONTEND_URL}/payment-success',
         'cancel_url': f'{settings.FRONTEND_URL}/payment-cancelled',
         'notify_url': f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast',
-        'name_first': user_name.split()[0] if ' ' in user_name else user_name,
-        'name_last': user_name.split()[-1] if ' ' in user_name else '',
+        'name_first': name_parts[0],
         'email_address': user_email,
         'amount': f'{amount:.2f}',
         'item_name': item_name,
-        'm_payment_id': str(payment_id),  # Our internal payment ID
+        'm_payment_id': str(payment_id),
         'email_confirmation': '1',
-        'confirmation_address': user_email
+        'confirmation_address': user_email,
     }
+    # Only add name_last if it exists
+    if len(name_parts) > 1:
+        payment_data['name_last'] = name_parts[-1]
     
     # Generate signature
     signature = generate_signature(payment_data)
@@ -53,21 +56,20 @@ def generate_payment_url(payment_id: int, amount: float, item_name: str, user_em
 def generate_signature(data: dict, passphrase: str = None) -> str:
     """
     Generate PayFast signature.
-    Parameters must be in the original insertion order, not sorted.
+    Uses quote_plus encoding (PHP urlencode equivalent) in insertion order.
     """
     if passphrase is None:
         passphrase = settings.PAYFAST_PASSPHRASE
 
-    # Build param string preserving insertion order
     param_parts = []
     for key, value in data.items():
         if key != 'signature':
-            param_parts.append(f'{key}={urlencode({key: str(value)})[len(key)+1:]}')
+            param_parts.append(f'{key}={quote_plus(str(value))}')
 
     param_string = '&'.join(param_parts)
 
     if passphrase:
-        param_string += f'&passphrase={passphrase}'
+        param_string += f'&passphrase={quote_plus(passphrase)}'
 
     return hashlib.md5(param_string.encode()).hexdigest()
 
