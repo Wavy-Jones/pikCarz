@@ -679,6 +679,7 @@ function showToast(msg, type = 'info') {
 }
 
 const user = JSON.parse(localStorage.getItem('user_data') || '{}');
+let _currentTier = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const nameEl = document.getElementById('dash-user-name');
@@ -699,6 +700,7 @@ async function loadSubscription() {
     const btn = document.getElementById('sub-action-btn');
 
     if (isActive && tier && tier !== 'free') {
+      _currentTier = tier;
       card.classList.add('has-plan');
       badge.style.display = 'none';
       planEl.textContent = tier.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) + ' Plan';
@@ -1079,8 +1081,13 @@ async function loadPlans() {
         ? `<p style="font-size:0.78rem;color:#f59e0b;font-weight:600;margin-bottom:12px;line-height:1.5">⏳ Price increases to R2,399/month after first 100 subscribers.</p>`
         : '';
 
-      const btnLabel = isFree ? 'Select Free Plan' : 'Start Free Trial';
-      const cardBorder = isPopular ? 'border-color:#f59e0b;' : '';
+      const isCurrentPlan = _currentTier === plan.tier;
+      const btnLabel = isCurrentPlan ? '✓ Current Plan' : isFree ? 'Select Free Plan' : 'Start Free Trial';
+      const btnStyle = isCurrentPlan
+        ? 'width:100%;background:var(--surface);color:var(--muted);border:1px solid var(--border);cursor:not-allowed;opacity:0.7'
+        : 'width:100%';
+      const btnAttr = isCurrentPlan ? 'disabled' : `onclick="subscribePlan('${plan.tier}', '${plan.name}', '${trialLabel || ''}')"`;
+      const cardBorder = isPopular ? 'border-color:#f59e0b;' : isCurrentPlan ? 'border-color:#10b981;' : '';
 
       return `
       <div class="plan-card" style="${cardBorder}">
@@ -1090,7 +1097,7 @@ async function loadPlans() {
         <div class="plan-price">R ${plan.price}<span style="font-size:0.85rem;font-weight:400;color:var(--muted)">/mo</span></div>
         ${dealerProNote}
         <ul class="plan-features">${(plan.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
-        <button onclick="subscribePlan('${plan.tier}', '${plan.name}', '${trialLabel || ''}')" class="btn-primary" style="width:100%">${btnLabel}</button>
+        <button ${btnAttr} class="btn-primary" style="${btnStyle}">${btnLabel}</button>
       </div>`;
     }).join('');
   } catch {
