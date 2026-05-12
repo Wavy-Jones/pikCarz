@@ -2,7 +2,7 @@
 PayFast payment gateway integration
 """
 import hashlib
-from urllib.parse import urlencode, quote_plus
+from urllib.parse import urlencode, quote_plus, quote
 from app.config import settings
 
 def generate_payment_data(payment_id: int, amount: float, item_name: str, user_email: str, user_name: str) -> dict:
@@ -54,16 +54,16 @@ def generate_signature(data: dict, passphrase: str = None) -> str:
     param_parts = []
     for key, value in data.items():
         if key != 'signature' and str(value).strip() != '':
-            param_parts.append(f'{key}={quote_plus(str(value).strip())}')
+            # Use quote() which encodes spaces as %20 (PHP rawurlencode equivalent)
+            param_parts.append(f'{key}={quote(str(value).strip())}')
 
     param_string = '&'.join(param_parts)
 
     if passphrase and passphrase.strip():
-        param_string += f'&passphrase={quote_plus(passphrase.strip())}'
+        param_string += f'&passphrase={quote(passphrase.strip())}'
 
     print(f"PAYFAST_DEBUG param_string: {param_string}")
     print(f"PAYFAST_DEBUG passphrase_len: {len(passphrase.strip()) if passphrase else 0}")
-    print(f"PAYFAST_DEBUG mode: {settings.PAYFAST_MODE}")
     sig = hashlib.md5(param_string.encode()).hexdigest()
     print(f"PAYFAST_DEBUG signature: {sig}")
     return sig
