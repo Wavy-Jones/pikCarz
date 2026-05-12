@@ -52,7 +52,7 @@ def generate_signature(data: dict, passphrase: str = None) -> str:
         passphrase = settings.PAYFAST_PASSPHRASE
 
     param_parts = []
-    for key, value in sorted(data.items()):  # alphabetical sort
+    for key, value in data.items():  # insertion order — must match form submission order
         if key != 'signature' and str(value).strip() != '':
             param_parts.append(f'{key}={quote_plus(str(value).strip())}')
 

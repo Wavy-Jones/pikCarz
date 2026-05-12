@@ -1127,15 +1127,22 @@ async function doSubscribe(tier) {
   try {
     const res = await api.post(`/api/subscriptions/subscribe/${tier}`);
     if (res.payment_url && res.payment_params) {
-      // POST form to PayFast (recommended method — avoids GET signature issues)
+      // POST form to PayFast — fields must be in the same order as the signature was computed
+      const PARAM_ORDER = ['merchant_id','merchant_key','return_url','cancel_url','notify_url',
+        'name_first','name_last','email_address','amount','item_name','m_payment_id',
+        'email_confirmation','confirmation_address','signature'];
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = res.payment_url;
-      for (const [key, value] of Object.entries(res.payment_params)) {
+      const params = res.payment_params;
+      // Submit in signature-computed order first, then any remaining keys
+      const orderedKeys = PARAM_ORDER.filter(k => k in params)
+        .concat(Object.keys(params).filter(k => !PARAM_ORDER.includes(k)));
+      for (const key of orderedKeys) {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = key;
-        input.value = value;
+        input.value = params[key];
         form.appendChild(input);
       }
       document.body.appendChild(form);
