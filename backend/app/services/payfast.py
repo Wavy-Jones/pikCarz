@@ -52,15 +52,14 @@ def generate_signature(data: dict, passphrase: str = None) -> str:
         passphrase = settings.PAYFAST_PASSPHRASE
 
     param_parts = []
-    for key, value in data.items():
+    for key, value in sorted(data.items()):  # alphabetical sort
         if key != 'signature' and str(value).strip() != '':
-            # Use quote() which encodes spaces as %20 (PHP rawurlencode equivalent)
-            param_parts.append(f'{key}={quote(str(value).strip())}')
+            param_parts.append(f'{key}={quote_plus(str(value).strip())}')
 
     param_string = '&'.join(param_parts)
 
     if passphrase and passphrase.strip():
-        param_string += f'&passphrase={quote(passphrase.strip())}'
+        param_string += f'&passphrase={quote_plus(passphrase.strip())}'
 
     print(f"PAYFAST_DEBUG param_string: {param_string}")
     print(f"PAYFAST_DEBUG passphrase_len: {len(passphrase.strip()) if passphrase else 0}")
