@@ -68,8 +68,8 @@ def generate_signature(data: dict, passphrase: str = None) -> str:
     print(f"PAYFAST_DEBUG sig_WITH passphrase: {sig_with}")
     print(f"PAYFAST_DEBUG sig_WITHOUT passphrase: {sig_without}")
 
-    # Currently using WITH passphrase — change to sig_without to test
-    return sig_with if (passphrase and passphrase.strip()) else sig_without
+    # Testing WITHOUT passphrase to diagnose
+    return sig_without
 
 def verify_payfast_signature(data: dict) -> bool:
     """
