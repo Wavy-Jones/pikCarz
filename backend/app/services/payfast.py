@@ -49,10 +49,6 @@ def generate_payment_url(payment_id: int, amount: float, item_name: str, user_em
     return data['url'] + '?' + urlencode(data['params'])
 
 def generate_signature(data: dict, passphrase: str = None) -> str:
-    """
-    Generate PayFast signature.
-    Uses quote_plus encoding (PHP urlencode equivalent) in insertion order.
-    """
     if passphrase is None:
         passphrase = settings.PAYFAST_PASSPHRASE
 
@@ -61,16 +57,19 @@ def generate_signature(data: dict, passphrase: str = None) -> str:
         if key != 'signature' and str(value).strip() != '':
             param_parts.append(f'{key}={quote_plus(str(value).strip())}')
 
-    param_string = '&'.join(param_parts)
+    base_string = '&'.join(param_parts)
+    string_with    = base_string + f'&passphrase={quote_plus(passphrase.strip())}' if (passphrase and passphrase.strip()) else base_string
+    string_without = base_string
 
-    if passphrase and passphrase.strip():
-        param_string += f'&passphrase={quote_plus(passphrase.strip())}'
+    sig_with    = hashlib.md5(string_with.encode()).hexdigest()
+    sig_without = hashlib.md5(string_without.encode()).hexdigest()
 
-    print(f"PAYFAST_DEBUG param_string: {param_string}")
-    print(f"PAYFAST_DEBUG passphrase_len: {len(passphrase.strip()) if passphrase else 0}")
-    sig = hashlib.md5(param_string.encode()).hexdigest()
-    print(f"PAYFAST_DEBUG signature: {sig}")
-    return sig
+    print(f"PAYFAST_DEBUG base: {base_string}")
+    print(f"PAYFAST_DEBUG sig_WITH passphrase: {sig_with}")
+    print(f"PAYFAST_DEBUG sig_WITHOUT passphrase: {sig_without}")
+
+    # Currently using WITH passphrase — change to sig_without to test
+    return sig_with if (passphrase and passphrase.strip()) else sig_without
 
 def verify_payfast_signature(data: dict) -> bool:
     """
