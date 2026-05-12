@@ -18,25 +18,15 @@ def generate_payment_data(payment_id: int, amount: float, item_name: str, user_e
     else:
         payfast_url = "https://www.payfast.co.za/eng/process"
 
-    name_parts = user_name.strip().split()
+    # MINIMUM field test — strip everything optional
     payment_data = {
         'merchant_id':  str(merchant_id),
         'merchant_key': str(merchant_key),
         'return_url':   f'{settings.FRONTEND_URL}/payment-success',
         'cancel_url':   f'{settings.FRONTEND_URL}/payment-cancelled',
-        'notify_url':   f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast',
-        'name_first':   name_parts[0],
-        'email_address': user_email,
         'amount':       f'{amount:.2f}',
         'item_name':    item_name,
-        'm_payment_id': str(payment_id),
     }
-    if len(name_parts) > 1:
-        # insert name_last right after name_first
-        items = list(payment_data.items())
-        idx = next(i for i, (k, _) in enumerate(items) if k == 'name_first')
-        items.insert(idx + 1, ('name_last', ' '.join(name_parts[1:])))
-        payment_data = dict(items)
 
     payment_data['signature'] = generate_signature(payment_data)
 
