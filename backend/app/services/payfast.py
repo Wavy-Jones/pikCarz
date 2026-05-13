@@ -29,9 +29,9 @@ def generate_payment_data(payment_id: int, amount: float, item_name: str, user_e
     merchant_key = settings.PAYFAST_MERCHANT_KEY
 
     if settings.PAYFAST_MODE == "sandbox":
-        payfast_url = "https://sandbox.payfast.io/eng/process"
+        payfast_url = "https://sandbox.payfast.co.za/eng/process"
     else:
-        payfast_url = "https://www.payfast.io/eng/process"
+        payfast_url = "https://www.payfast.co.za/eng/process"
 
     name_parts = user_name.strip().split()
     payment_data = {
