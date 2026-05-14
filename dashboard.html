@@ -686,6 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (nameEl && user.full_name) nameEl.textContent = user.full_name;
   loadSubscription();
   loadMyListings();
+  loadFavourites();
+  loadAlerts();
 });
 
 async function loadSubscription() {
@@ -1173,6 +1175,181 @@ window.addEventListener('click', e => {
   if (e.target.id === 'edit-modal')        closeEditModal();
   if (e.target.id === 'sub-confirm-modal') closeSubConfirm();
 });
+
+// ── Favourites ────────────────────────────────────────────────────────
+async function loadFavourites() {
+  const container = document.getElementById('favourites-container');
+  if (!container) return;
+  try {
+    const favs = await api.getSilent('/api/favourites/');
+    if (!favs || !favs.length) {
+      container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:32px">No saved listings yet. Browse vehicles and click ❤ to save them.</p>';
+      return;
+    }
+    container.innerHTML = '<div class="listings-grid">' + favs.map(f => `
+      <div class="my-listing-card">
+        <div class="listing-img" style="${f.images?.[0] ? `background-image:url('${f.images[0]}')` : 'background:var(--surface)'}">
+        </div>
+        <div class="listing-body">
+          <h3>${f.title}</h3>
+          <div class="listing-price">R ${Number(f.price).toLocaleString('en-ZA')}</div>
+          <div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">${f.province}${f.city ? ', ' + f.city : ''}</div>
+          <div class="listing-actions">
+            <button class="btn-edit" onclick="window.location='vehicle-detail.html?id=${f.vehicle_id}'">View</button>
+            <button class="btn-del" onclick="unsaveListing(${f.vehicle_id})">Unsave</button>
+          </div>
+        </div>
+      </div>`).join('') + '</div>';
+  } catch {
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:32px">Sign in to see your saved listings.</p>';
+  }
+}
+
+async function unsaveListing(vehicleId) {
+  try {
+    await api.delete(`/api/favourites/${vehicleId}`);
+    showToast('Listing removed from saved.', 'info');
+    loadFavourites();
+  } catch (e) { showToast('Could not unsave.', 'error'); }
+}
+
+// ── Search Alerts ─────────────────────────────────────────────────────
+async function loadAlerts() {
+  const container = document.getElementById('alerts-list');
+  if (!container) return;
+  try {
+    const alerts = await api.getSilent('/api/search-alerts/');
+    if (!alerts || !alerts.length) {
+      container.innerHTML = '<p style="color:var(--muted)">No search alerts yet. Create one to get notified when matching listings go live.</p>';
+      return;
+    }
+    container.innerHTML = alerts.map(a => {
+      const parts = [];
+      if (a.make) parts.push(`Make: <strong>${a.make}</strong>`);
+      if (a.province) parts.push(`Province: <strong>${a.province}</strong>`);
+      if (a.min_price) parts.push(`From: <strong>R${Number(a.min_price).toLocaleString('en-ZA')}</strong>`);
+      if (a.max_price) parts.push(`To: <strong>R${Number(a.max_price).toLocaleString('en-ZA')}</strong>`);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <span style="color:var(--muted);font-size:0.88rem">${parts.join(' &bull; ') || 'Any vehicle'}</span>
+        <button onclick="deleteAlert(${a.id})" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.82rem;cursor:pointer">Delete</button>
+      </div>`;
+    }).join('');
+  } catch { container.innerHTML = '<p style="color:var(--muted)">Sign in to manage search alerts.</p>'; }
+}
+
+function toggleAlertForm() {
+  const f = document.getElementById('new-alert-form');
+  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function createAlert() {
+  const data = {
+    make:      document.getElementById('al-make')?.value.trim() || null,
+    province:  document.getElementById('al-province')?.value   || null,
+    min_price: parseFloat(document.getElementById('al-min')?.value) || null,
+    max_price: parseFloat(document.getElementById('al-max')?.value) || null,
+  };
+  try {
+    await api.post('/api/search-alerts/', data);
+    showToast('Search alert created!', 'success');
+    toggleAlertForm();
+    loadAlerts();
+  } catch (e) { showToast('Could not create alert: ' + e.message, 'error'); }
+}
+
+async function deleteAlert(id) {
+  try {
+    await api.delete(`/api/search-alerts/${id}`);
+    showToast('Alert deleted.', 'info');
+    loadAlerts();
+  } catch (e) { showToast('Could not delete alert.', 'error'); }
+}
+
+// ── Bulk Upload ───────────────────────────────────────────────────────────────
+function downloadCsvTemplate() {
+  const csv = 'title,make,model,year,price,province,mileage,category,transmission,fuel_type,color,city,description\n2020 Toyota Hilux 2.8 GD-6,Toyota,Hilux,2020,450000,Gauteng,45000,used_car,Manual,Diesel,White,Johannesburg,Well maintained bakkie';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'pikcarz_bulk_template.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function uploadBulkCsv() {
+  const input  = document.getElementById('bulk-csv-input');
+  const btn    = document.getElementById('bulk-upload-btn');
+  const result = document.getElementById('bulk-result');
+  if (!input?.files.length) { showToast('Please select a CSV file.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Uploading…';
+  try {
+    const token = localStorage.getItem('auth_token');
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    const res = await fetch('https://pikcarz.vercel.app/api/vehicles/bulk-upload', {
+      method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+    result.innerHTML = `<div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:12px 16px;border-radius:8px">
+      ✅ <strong>${data.created}</strong> listing(s) created — pending admin approval.
+      ${data.errors?.length ? `<br><span style="color:#f59e0b">⚠️ ${data.errors.length} row(s) failed: ${data.errors.map(e => `Row ${e.row}: ${e.error}`).join(', ')}</span>` : ''}
+    </div>`;
+    input.value = ''; loadMyListings();
+  } catch (e) {
+    result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px 16px;border-radius:8px">❌ ${e.message}</div>`;
+  } finally { btn.disabled = false; btn.textContent = 'Upload CSV'; }
+}
 </script>
+
+<!-- ── Saved Listings ───────────────────── -->
+<section class="section" style="padding-top:8px">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="color:var(--white)">❤️ Saved Listings</h2>
+      <button onclick="loadFavourites()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">↺ Refresh</button>
+    </div>
+    <div id="favourites-container"><p style="color:var(--muted);text-align:center;padding:32px">Loading…</p></div>
+  </div>
+</section>
+
+<!-- ── Search Alerts ───────────────────── -->
+<section class="section" style="padding-top:8px">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h2 style="color:var(--white)">🔔 Search Alerts</h2>
+      <button onclick="toggleAlertForm()" class="btn-primary" style="font-size:0.85rem;padding:8px 16px">+ New Alert</button>
+    </div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px">Get emailed when a matching listing goes live. Max 5 alerts.</p>
+    <div id="alerts-list"><p style="color:var(--muted)">Loading…</p></div>
+    <div id="new-alert-form" style="display:none;margin-top:20px;padding:20px;background:var(--card);border-radius:10px;border:1px solid var(--border)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+        <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">Make</label><input id="al-make" type="text" placeholder="e.g. Toyota" style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white)"></div>
+        <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">Province</label><select id="al-province" style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white)"><option value="">Any</option><option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option><option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option><option>North West</option><option>Free State</option><option>Northern Cape</option></select></div>
+        <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">Min Price (R)</label><input id="al-min" type="number" placeholder="0" style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white)"></div>
+        <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">Max Price (R)</label><input id="al-max" type="number" placeholder="Any" style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white)"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="createAlert()" class="btn-primary" style="padding:10px 20px">✔ Save Alert</button>
+        <button onclick="toggleAlertForm()" class="btn-ghost" style="padding:10px 16px">Cancel</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Bulk Upload ───────────────────── -->
+<section class="section" style="padding-top:8px;padding-bottom:48px">
+  <div class="container">
+    <div style="margin-bottom:8px"><h2 style="color:var(--white)">📂 Bulk Upload Listings</h2></div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:16px">Upload a CSV to create multiple listings. Each row becomes a pending listing awaiting admin approval.</p>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <button onclick="downloadCsvTemplate()" class="btn-ghost" style="font-size:0.85rem">⬇️ Download CSV Template</button>
+      <span style="color:var(--muted);font-size:0.82rem">Required: title, make, model, year, price, province</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <input type="file" id="bulk-csv-input" accept=".csv" style="padding:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.88rem">
+      <button onclick="uploadBulkCsv()" class="btn-primary" id="bulk-upload-btn">Upload CSV</button>
+    </div>
+    <div id="bulk-result" style="margin-top:16px"></div>
+  </div>
+</section>
 </body>
 </html>

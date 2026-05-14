@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare Vehicles — pikCarz</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <style>
+    .compare-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+    .compare-table { width: 100%; border-collapse: collapse; }
+    .compare-table th, .compare-table td {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      text-align: left; vertical-align: top;
+    }
+    .compare-table th {
+      background: var(--surface); color: var(--muted);
+      font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.05em; width: 140px; white-space: nowrap;
+    }
+    .compare-table td { color: var(--white); font-size: 0.95rem; background: var(--card); }
+    .compare-table tr:hover td { background: var(--surface); }
+    .compare-vehicle-img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; }
+    .compare-price { font-size: 1.4rem; font-weight: 800; color: var(--accent); font-family: 'Barlow Condensed', sans-serif; }
+    .compare-title { font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+    .compare-badge { display: inline-block; background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #10b981; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 100px; margin-left: 6px; }
+    .highlight td { background: rgba(255,69,69,0.06) !important; }
+    .compare-header-cell { text-align: center; padding: 20px 16px; }
+    @media(max-width:768px) { .compare-table th { display: none; } .compare-table td { display: block; width: 100%; } }
+  </style>
+</head>
+<body>
+
+<header class="navbar">
+  <nav class="nav-inner">
+    <a href="index.html" class="logo">
+      <img src="Logo.png" alt="pikCarz" class="logo-img" />
+      <span class="logo-sub">Powered by Cubeas</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="browse.html">Browse Vehicles</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="nav-actions">
+      <a href="browse.html" class="btn-primary">Browse More</a>
+    </div>
+    <button class="hamburger"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<div class="compare-container">
+  <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div class="breadcrumb"><a href="index.html">Home</a><span>/</span><a href="browse.html">Browse</a><span>/</span><span>Compare</span></div>
+      <h1 style="margin-top:8px;color:var(--white)">Vehicle Comparison</h1>
+    </div>
+    <a href="browse.html" class="btn-ghost">← Back to Browse</a>
+  </div>
+  <div id="compare-loading" style="text-align:center;padding:60px;color:var(--muted)">Loading vehicles…</div>
+  <div id="compare-content" style="display:none">
+    <div style="overflow-x:auto">
+      <table class="compare-table" id="compare-table"></table>
+    </div>
+    <div style="margin-top:32px;text-align:center">
+      <a href="browse.html" class="btn-primary" style="padding:12px 28px">Browse More Vehicles</a>
+    </div>
+  </div>
+  <div id="compare-error" style="display:none;text-align:center;padding:80px 20px;color:var(--muted)">
+    <h3 style="color:var(--white);margin-bottom:12px">No vehicles to compare</h3>
+    <p>Select 2 or 3 vehicles from the browse page to compare them.</p>
+    <a href="browse.html" class="btn-primary" style="margin-top:20px;display:inline-block">Browse Vehicles</a>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <p>&copy; 2026 pikCarz — A <strong>Cubeas</strong> product. All rights reserved.</p>
+      <p>Developed by <strong>INFNT Solutions</strong></p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/main.js"></script>
+<script>
+const API_BASE = 'https://pikcarz.vercel.app';
+const ROWS = [
+  { label: 'Photo',        key: 'image' },
+  { label: 'Price',        key: 'price' },
+  { label: 'Year',         key: 'year' },
+  { label: 'Make',         key: 'make' },
+  { label: 'Model',        key: 'model' },
+  { label: 'Mileage',      key: 'mileage' },
+  { label: 'Transmission', key: 'transmission' },
+  { label: 'Fuel Type',    key: 'fuel_type' },
+  { label: 'Colour',       key: 'color' },
+  { label: 'Province',     key: 'province' },
+  { label: 'City',         key: 'city' },
+  { label: 'Views',        key: 'views' },
+  { label: '',             key: 'action' },
+];
+
+async function loadComparison() {
+  const params = new URLSearchParams(window.location.search);
+  const ids = (params.get('ids') || '').split(',').map(Number).filter(Boolean);
+  if (ids.length < 2) {
+    document.getElementById('compare-loading').style.display = 'none';
+    document.getElementById('compare-error').style.display = 'block';
+    return;
+  }
+  try {
+    const vehicles = await Promise.all(
+      ids.map(id => fetch(`${API_BASE}/api/vehicles/${id}`).then(r => r.json()))
+    );
+    renderTable(vehicles);
+    document.getElementById('compare-loading').style.display = 'none';
+    document.getElementById('compare-content').style.display = 'block';
+  } catch {
+    document.getElementById('compare-loading').textContent = 'Failed to load vehicles.';
+  }
+}
+
+function fmt(v, key) {
+  switch (key) {
+    case 'image':
+      return `<a href="vehicle-detail.html?id=${v.id}">
+        <img src="${v.images?.[0] || ''}" class="compare-vehicle-img"
+          onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=70'"
+          alt="${v.make} ${v.model}">
+        <div class="compare-title">${v.title || v.year + ' ' + v.make + ' ' + v.model}
+          ${v.is_verified ? '<span class="compare-badge">Verified</span>' : ''}
+        </div>
+      </a>`;
+    case 'price':   return `<span class="compare-price">R ${Number(v.price).toLocaleString('en-ZA')}</span>`;
+    case 'mileage': return v.mileage ? `${v.mileage.toLocaleString()} km` : '—';
+    case 'views':   return v.views || 0;
+    case 'action':  return `<a href="vehicle-detail.html?id=${v.id}" class="btn-primary" style="font-size:0.85rem;padding:10px 16px;display:inline-block">View Listing →</a>`;
+    default:        return v[key] || '—';
+  }
+}
+
+function renderTable(vehicles) {
+  const table = document.getElementById('compare-table');
+  table.innerHTML = ROWS.map(row => `
+    <tr${row.key === 'price' ? ' class="highlight"' : ''}>
+      <th>${row.label}</th>
+      ${vehicles.map(v => `<td class="compare-header-cell">${fmt(v, row.key)}</td>`).join('')}
+    </tr>`).join('');
+}
+
+loadComparison();
+</script>
+</body>
+</html>

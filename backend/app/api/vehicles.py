@@ -293,6 +293,67 @@ def delete_vehicle(
     db.commit()
 
 
+# ── Bulk CSV Upload ──────────────────────────────────────────────────────────
+
+@router.post("/bulk-upload")
+async def bulk_upload_vehicles(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload a CSV file to create multiple listings at once.
+    Required columns: title, make, model, year, price, province
+    Optional: mileage, category, transmission, fuel_type, color, city, description
+    """
+    import csv, io
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    content = await file.read()
+    try:
+        text = content.decode('utf-8-sig')  # handles BOM
+        reader = csv.DictReader(io.StringIO(text))
+        required = {'title', 'make', 'model', 'year', 'price', 'province'}
+        rows = list(reader)
+        if not rows:
+            raise HTTPException(status_code=400, detail="CSV is empty")
+        missing = required - set(rows[0].keys())
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Missing columns: {missing}")
+        created, errors = [], []
+        for i, row in enumerate(rows, 1):
+            try:
+                vehicle = Vehicle(
+                    owner_id=current_user.id,
+                    title=row['title'].strip(),
+                    make=row['make'].strip(),
+                    model=row['model'].strip(),
+                    year=int(row['year']),
+                    price=float(row['price']),
+                    province=row['province'].strip(),
+                    mileage=int(row['mileage']) if row.get('mileage','').strip() else None,
+                    category=VehicleCategory(row.get('category','used_car').strip() or 'used_car'),
+                    transmission=row.get('transmission','').strip() or None,
+                    fuel_type=row.get('fuel_type','').strip() or None,
+                    color=row.get('color','').strip() or None,
+                    city=row.get('city','').strip() or None,
+                    description=row.get('description','').strip() or None,
+                    images=[],
+                    status=VehicleStatus.PENDING,
+                    expires_at=datetime.utcnow() + timedelta(days=30),
+                )
+                db.add(vehicle)
+                created.append(i)
+            except Exception as e:
+                errors.append({'row': i, 'error': str(e)})
+        db.commit()
+        return {'created': len(created), 'errors': errors}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"CSV parse error: {e}")
+
+
 # ── My Listings ───────────────────────────────────────────────────────────────
 
 @router.get("/my/listings", response_model=VehicleListResponse)

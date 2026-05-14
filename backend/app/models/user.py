@@ -37,5 +37,7 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    vehicles = relationship("Vehicle", back_populates="owner")
+    vehicles      = relationship("Vehicle",     back_populates="owner")
+    favourites     = relationship("Favourite",   back_populates="user", cascade="all, delete-orphan")
+    search_alerts  = relationship("SearchAlert", back_populates="user", cascade="all, delete-orphan")
     payments = relationship("Payment", back_populates="user")

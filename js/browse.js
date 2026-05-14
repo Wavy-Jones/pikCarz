@@ -3,19 +3,108 @@
    DB enum values: new_car | used_car | motorbike | truck | other
    ============================================ */
 
-// ── Favourite toggle ──────────────────────────────────────────────────────────
-window.toggleSave = function(btn) {
-  btn.classList.toggle('saved');
+const API_BASE = 'https://pikcarz.vercel.app';
+let _savedIds   = new Set(); // vehicle IDs saved by current user
+let _compareIds = [];        // up to 3 vehicle IDs for comparison
+
+// ── Load saved IDs (if logged in) ────────────────────────────────────────────
+async function loadSavedIds() {
+  const token = localStorage.getItem('auth_token');
+  if (!token) return;
+  try {
+    const ids = await api.getSilent('/api/favourites/ids');
+    _savedIds = new Set(ids);
+  } catch { /* not logged in or error */ }
+}
+
+// ── Favourite toggle (real API) ───────────────────────────────────────────────
+window.toggleSave = async function(btn, vehicleId) {
+  const token = localStorage.getItem('auth_token');
+  if (!token) { window.location.href = 'signin.html'; return; }
+  const saved = _savedIds.has(vehicleId);
+  try {
+    if (saved) {
+      await api.delete(`/api/favourites/${vehicleId}`);
+      _savedIds.delete(vehicleId);
+    } else {
+      await api.post(`/api/favourites/${vehicleId}`);
+      _savedIds.add(vehicleId);
+    }
+    _renderSaveBtn(btn, !saved);
+  } catch { /* silently fail */ }
+};
+
+function _renderSaveBtn(btn, isSaved) {
   const svg = btn.querySelector('svg');
-  if (btn.classList.contains('saved')) {
-    svg.style.fill   = '#F05A1A';
-    svg.style.stroke = '#F05A1A';
-    btn.setAttribute('aria-label', 'Unsave');
+  if (isSaved) {
+    svg.style.fill   = '#ff4545';
+    svg.style.stroke = '#ff4545';
+    btn.title = 'Unsave';
   } else {
     svg.style.fill   = 'none';
     svg.style.stroke = 'currentColor';
-    btn.setAttribute('aria-label', 'Save');
+    btn.title = 'Save';
   }
+}
+
+// ── Compare ───────────────────────────────────────────────────────────────────
+window.toggleCompare = function(btn, vehicle) {
+  const idx = _compareIds.findIndex(v => v.id === vehicle.id);
+  if (idx > -1) {
+    _compareIds.splice(idx, 1);
+    btn.classList.remove('comparing');
+    btn.textContent = '⚖ Compare';
+  } else {
+    if (_compareIds.length >= 3) { alert('You can compare up to 3 vehicles.'); return; }
+    _compareIds.push(vehicle);
+    btn.classList.add('comparing');
+    btn.textContent = '✓ Added';
+  }
+  _renderCompareBar();
+};
+
+function _renderCompareBar() {
+  let bar = document.getElementById('compare-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'compare-bar';
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;z-index:500;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(0,0,0,0.3)';
+    document.body.appendChild(bar);
+  }
+  if (!_compareIds.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const slots = _compareIds.map(v => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border)">
+      <img src="${v.images?.[0] || ''}" style="width:40px;height:30px;object-fit:cover;border-radius:4px" onerror="this.style.display='none'">
+      <span style="font-size:0.85rem;color:var(--white)">${v.year} ${v.make} ${v.model}</span>
+      <button onclick="removeCompare(${v.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1">×</button>
+    </div>`).join('');
+  bar.innerHTML = `
+    <span style="color:var(--muted);font-size:0.88rem;white-space:nowrap">Comparing ${_compareIds.length} vehicle${_compareIds.length > 1 ? 's' : ''}:</span>
+    ${slots}
+    ${_compareIds.length >= 2
+      ? `<button onclick="goCompare()" class="btn-primary" style="white-space:nowrap;padding:10px 20px">Compare Now →</button>`
+      : '<span style="color:var(--muted);font-size:0.82rem">Select at least 2</span>'}
+    <button onclick="clearCompare()" class="btn-ghost" style="font-size:0.82rem;padding:8px 12px">Clear</button>`;
+}
+
+window.removeCompare = function(id) {
+  _compareIds = _compareIds.filter(v => v.id !== id);
+  document.querySelectorAll('.compare-btn').forEach(btn => {
+    if (parseInt(btn.dataset.id) === id) { btn.classList.remove('comparing'); btn.textContent = '⚖ Compare'; }
+  });
+  _renderCompareBar();
+};
+
+window.clearCompare = function() {
+  _compareIds = [];
+  document.querySelectorAll('.compare-btn.comparing').forEach(btn => { btn.classList.remove('comparing'); btn.textContent = '⚖ Compare'; });
+  _renderCompareBar();
+};
+
+window.goCompare = function() {
+  const ids = _compareIds.map(v => v.id).join(',');
+  window.location.href = `compare.html?ids=${ids}`;
 };
 
 // ── Category label map ────────────────────────────────────────────────────────
@@ -142,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   updateActiveFilterTags();
+  await loadSavedIds();
   await loadVehicles();
 
   // ── Apply filters button ─────────────────────────────────────────────────────
@@ -325,8 +415,8 @@ function createVehicleCard(vehicle) {
              onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80'"/>
         <span class="card-badge ${badge.cls}">${badge.label}</span>
         ${verifiedBadge}
-        <button class="card-save" onclick="event.stopPropagation();toggleSave(this)" aria-label="Save">
-          <svg viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+        <button class="card-save" onclick="event.stopPropagation();toggleSave(this,${vehicle.id})" title="${_savedIds.has(vehicle.id) ? 'Unsave' : 'Save'}">
+          <svg viewBox="0 0 24 24" stroke-width="2" stroke="${_savedIds.has(vehicle.id) ? '#ff4545' : 'currentColor'}" fill="${_savedIds.has(vehicle.id) ? '#ff4545' : 'none'}">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
         </button>
@@ -343,16 +433,11 @@ function createVehicleCard(vehicle) {
         </div>
       </div>
       <div class="card-footer">
-        <div class="card-seller">
-          <div class="seller-av">${initials}</div>
-          <span class="seller-name">${sellerName}</span>
-        </div>
-        <div class="card-loc">
-          <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          ${vehicle.city || vehicle.province || ''}
-        </div>
+      <div class="card-seller">
+      <div class="seller-av">${initials}</div>
+      <span class="seller-name">${sellerName}</span>
+      </div>
+      <button class="compare-btn" data-id="${vehicle.id}" onclick="event.stopPropagation();toggleCompare(this,{id:${vehicle.id},make:'${vehicle.make.replace(/'/g,"\\'")}',model:'${vehicle.model.replace(/'/g,"\\'")}',year:${vehicle.year},images:${JSON.stringify(vehicle.images||[])},price:${vehicle.price}})" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap">⚖️ Compare</button>
       </div>
     </article>`;
 }

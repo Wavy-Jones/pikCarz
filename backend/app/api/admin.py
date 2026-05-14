@@ -276,7 +276,40 @@ def approve_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), d
         raise HTTPException(400, f"Cannot approve a vehicle with status '{v.status}'")
     v.status = VehicleStatus.ACTIVE
     db.commit(); db.refresh(v)
+    # Fire search alert emails (best-effort, non-blocking)
+    try:
+        _notify_search_alerts(v, db)
+    except Exception as e:
+        print(f"[search_alerts] notification error: {e}")
     return _vehicle_response(v, db.query(User).filter(User.id == v.owner_id).first())
+
+
+def _notify_search_alerts(vehicle: Vehicle, db: Session):
+    """Send email to users whose search alerts match this newly approved vehicle."""
+    from app.models.search_alert import SearchAlert
+    from app.services.email import send_email
+    alerts = db.query(SearchAlert).all()
+    for alert in alerts:
+        if alert.make     and alert.make.lower()     not in vehicle.make.lower():      continue
+        if alert.category and alert.category          != vehicle.category.value:       continue
+        if alert.province and alert.province.lower()  not in vehicle.province.lower(): continue
+        if alert.min_price and float(vehicle.price) < float(alert.min_price):          continue
+        if alert.max_price and float(vehicle.price) > float(alert.max_price):          continue
+        user = db.query(User).filter(User.id == alert.user_id).first()
+        if not user: continue
+        detail_url = f"https://pikcarz.co.za/vehicle-detail.html?id={vehicle.id}"
+        send_email(
+            to=user.email,
+            subject=f"New listing matches your alert: {vehicle.title}",
+            body=(
+                f"Hi {user.full_name},\n\n"
+                f"A new vehicle matching your saved search is now available on pikCarz:\n\n"
+                f"  {vehicle.title}\n"
+                f"  R {float(vehicle.price):,.0f} · {vehicle.province}\n\n"
+                f"View it here: {detail_url}\n\n"
+                f"Happy hunting,\nThe pikCarz Team"
+            )
+        )
 
 
 @router.put("/vehicles/{vehicle_id}/reject", response_model=VehicleResponse)

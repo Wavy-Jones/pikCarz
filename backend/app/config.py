@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     PAYFAST_PASSPHRASE: Optional[str] = None
     PAYFAST_MODE: str = "sandbox"
 
+    # Cron job secret for renewal reminders
+    CRON_SECRET: str = "pikcarz-cron-2026"
+
     # Admin
     ADMIN_EMAIL: str = "admin@pikcarz.co.za"
     ADMIN_PASSWORD: Optional[str] = None

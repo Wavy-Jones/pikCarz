@@ -247,6 +247,42 @@ async def payfast_webhook(request: Request, db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 
+@router.post("/send-renewal-reminders")
+def send_renewal_reminders(secret: str, db: Session = Depends(get_db)):
+    """Called by a cron job to send subscription renewal reminder emails."""
+    from app.config import settings
+    from app.services.email import send_email
+    if secret != settings.CRON_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    now = datetime.utcnow()
+    reminder_window = now + timedelta(days=7)
+    users = db.query(User).filter(
+        User.subscription_expires != None,
+        User.subscription_expires > now,
+        User.subscription_expires <= reminder_window,
+        User.subscription_tier != SubscriptionTier.FREE,
+    ).all()
+    sent = 0
+    for user in users:
+        days_left = (user.subscription_expires.replace(tzinfo=None) - now).days
+        tier_name = user.subscription_tier.value.replace('_', ' ').title()
+        send_email(
+            to=user.email,
+            subject=f"Your pikCarz {tier_name} subscription expires in {days_left} day(s)",
+            body=(
+                f"Hi {user.full_name},\n\n"
+                f"Your {tier_name} subscription on pikCarz expires in {days_left} day(s).\n\n"
+                f"To keep your listings active and avoid interruption, "
+                f"please renew by visiting:\n"
+                f"https://pikcarz.co.za/dashboard.html\n\n"
+                f"Thank you for being part of pikCarz!\n"
+                f"The pikCarz Team"
+            )
+        )
+        sent += 1
+    return {"reminders_sent": sent}
+
+
 @router.get("/my-subscription")
 def get_my_subscription(current_user: User = Depends(get_current_user)):
     """Get current user's subscription info."""

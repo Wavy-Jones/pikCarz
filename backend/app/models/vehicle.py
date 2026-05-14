@@ -58,4 +58,5 @@ class Vehicle(Base):
     expires_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    owner = relationship("User", back_populates="vehicles")
+    owner      = relationship("User",      back_populates="vehicles")
+    favourites = relationship("Favourite", back_populates="vehicle", cascade="all, delete-orphan")
