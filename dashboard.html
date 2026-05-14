@@ -1129,8 +1129,7 @@ async function doSubscribe(tier) {
     if (res.payment_url && res.payment_params) {
       // POST form to PayFast — fields must be in the same order as the signature was computed
       const PARAM_ORDER = ['merchant_id','merchant_key','return_url','cancel_url','notify_url',
-        'name_first','name_last','email_address','amount','item_name','m_payment_id',
-        'email_confirmation','confirmation_address','signature'];
+        'name_first','name_last','email_address','m_payment_id','amount','item_name','signature'];
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = res.payment_url;
