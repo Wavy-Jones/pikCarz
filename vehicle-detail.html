@@ -414,7 +414,41 @@
       margin-top: 16px;
     }
 
-    @media (max-width: 768px) {
+    .finance-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .finance-card h3 { color: var(--white); margin-bottom: 20px; display:flex; align-items:center; gap:8px; }
+    .finance-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .finance-field label { display:block; font-size:0.83rem; color:var(--muted); margin-bottom:6px; font-weight:500; text-transform:uppercase; letter-spacing:0.04em; }
+    .finance-field input, .finance-field select {
+      width:100%; padding:10px 14px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:8px; color:var(--white); font-size:0.95rem;
+    }
+    .finance-field input:focus, .finance-field select:focus { outline:none; border-color:var(--accent); }
+    .finance-result {
+      background: linear-gradient(135deg, rgba(255,69,69,0.12) 0%, rgba(255,140,66,0.12) 100%);
+      border: 1px solid rgba(255,69,69,0.3);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      text-align: center;
+    }
+    .finance-result-item .label { font-size:0.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
+    .finance-result-item .value { font-size:1.4rem; font-weight:800; color:var(--accent); font-family:'Barlow Condensed', sans-serif; }
+    .finance-result-item .value.monthly { font-size:1.9rem; color:#ff4545; }
+    .finance-disclaimer { font-size:0.75rem; color:var(--muted); margin-top:14px; line-height:1.5; }
+    @media(max-width:600px) {
+      .finance-row { grid-template-columns: 1fr; }
+      .finance-result { grid-template-columns: 1fr; }
+    }
       .vehicle-content {
         grid-template-columns: 1fr;
       }
@@ -556,6 +590,56 @@
           <p id="vehicle-description">Loading description...</p>
         </div>
 
+        <!-- Finance Calculator -->
+        <div class="finance-card" id="finance-calculator">
+          <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="7" x2="8" y2="7"/><line x1="12" y1="7" x2="12" y2="7"/><line x1="16" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="12" y1="15" x2="12" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/></svg>
+            Finance Calculator
+          </h3>
+          <div class="finance-row">
+            <div class="finance-field">
+              <label>Vehicle Price (R)</label>
+              <input type="number" id="fc-price" min="0" step="1000" oninput="calcFinance()" />
+            </div>
+            <div class="finance-field">
+              <label>Deposit (R)</label>
+              <input type="number" id="fc-deposit" min="0" step="1000" value="0" oninput="calcFinance()" />
+            </div>
+          </div>
+          <div class="finance-row">
+            <div class="finance-field">
+              <label>Interest Rate (% p.a.)</label>
+              <input type="number" id="fc-rate" min="0" max="30" step="0.25" value="11.75" oninput="calcFinance()" />
+            </div>
+            <div class="finance-field">
+              <label>Loan Term</label>
+              <select id="fc-term" onchange="calcFinance()">
+                <option value="12">12 months (1 year)</option>
+                <option value="24">24 months (2 years)</option>
+                <option value="36">36 months (3 years)</option>
+                <option value="48">48 months (4 years)</option>
+                <option value="60" selected>60 months (5 years)</option>
+                <option value="72">72 months (6 years)</option>
+              </select>
+            </div>
+          </div>
+          <div class="finance-result" id="fc-result">
+            <div class="finance-result-item">
+              <div class="label">Monthly Instalment</div>
+              <div class="value monthly" id="fc-monthly">R 0</div>
+            </div>
+            <div class="finance-result-item">
+              <div class="label">Total Repayment</div>
+              <div class="value" id="fc-total">R 0</div>
+            </div>
+            <div class="finance-result-item">
+              <div class="label">Total Interest</div>
+              <div class="value" id="fc-interest">R 0</div>
+            </div>
+          </div>
+          <p class="finance-disclaimer">* This calculator provides an estimate only. Actual repayments depend on your credit profile, bank fees and insurance. Contact your bank or a registered financial service provider for a formal quote.</p>
+        </div>
+
         <!-- Additional Info -->
         <div class="vehicle-description">
           <h3>Vehicle Information</h3>
@@ -596,6 +680,11 @@
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
               Email Enquiry
+            </button>
+
+            <button class="btn-contact btn-contact-secondary" onclick="document.getElementById('finance-calculator').scrollIntoView({behavior:'smooth'})">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
+              Finance Calculator
             </button>
 
             <button class="btn-contact btn-contact-secondary" onclick="shareVehicle()">
@@ -867,6 +956,10 @@ function displayVehicle(vehicle) {
   document.getElementById('vehicle-date').textContent = formatDate(vehicle.created_at);
   document.getElementById('vehicle-location').textContent = vehicle.city ? `${vehicle.city}, ${vehicle.province}` : vehicle.province;
 
+  // Pre-fill finance calculator with vehicle price
+  const fcPrice = document.getElementById('fc-price');
+  if (fcPrice) { fcPrice.value = vehicle.price; calcFinance(); }
+
   // Seller info — use contact_name/contact_phone for admin-on-behalf listings,
   // otherwise fall back to the account owner's seller_name.
   const displayName  = vehicle.contact_name  || vehicle.seller_name || 'Seller';
@@ -919,6 +1012,27 @@ function shareVehicle() {
       alert('Link copied to clipboard!');
     });
   }
+}
+
+function calcFinance() {
+  const price    = parseFloat(document.getElementById('fc-price').value)   || 0;
+  const deposit  = parseFloat(document.getElementById('fc-deposit').value) || 0;
+  const ratePA   = parseFloat(document.getElementById('fc-rate').value)    || 0;
+  const months   = parseInt(document.getElementById('fc-term').value)      || 60;
+  const principal = Math.max(0, price - deposit);
+  const fmt = n => 'R\u00a0' + Math.round(n).toLocaleString('en-ZA');
+  if (principal <= 0 || ratePA <= 0) {
+    document.getElementById('fc-monthly').textContent  = fmt(0);
+    document.getElementById('fc-total').textContent    = fmt(0);
+    document.getElementById('fc-interest').textContent = fmt(0);
+    return;
+  }
+  const r = ratePA / 100 / 12;
+  const monthly = principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
+  const total   = monthly * months;
+  document.getElementById('fc-monthly').textContent  = fmt(monthly);
+  document.getElementById('fc-total').textContent    = fmt(total);
+  document.getElementById('fc-interest').textContent = fmt(total - principal);
 }
 
 window.addEventListener('DOMContentLoaded', loadVehicle);
