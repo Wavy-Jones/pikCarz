@@ -47,6 +47,11 @@ class Vehicle(Base):
     status = Column(Enum(VehicleStatus), default=VehicleStatus.PENDING, nullable=False, index=True)
     is_featured = Column(Boolean, default=False)
     
+    # Engagement counters
+    views        = Column(Integer, default=0, server_default='0', nullable=False)
+    whatsapp_leads = Column(Integer, default=0, server_default='0', nullable=False)
+    email_leads    = Column(Integer, default=0, server_default='0', nullable=False)
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

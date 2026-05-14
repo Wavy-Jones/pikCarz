@@ -731,8 +731,10 @@ async function loadMyListings() {
 
     const active  = vehicles.filter(v => v.status === 'active').length;
     const pending = vehicles.filter(v => v.status === 'pending').length;
+    const totalViews = vehicles.reduce((sum, v) => sum + (v.views || 0), 0);
     document.getElementById('stat-active').textContent  = active;
     document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-views').textContent   = totalViews;
 
     if (!vehicles.length) {
       container.innerHTML = `
@@ -779,6 +781,11 @@ function listingCard(v) {
       <div class="listing-body">
         <h3>${v.title || `${v.year} ${v.make} ${v.model}`}</h3>
         <div class="listing-price">R ${Number(v.price).toLocaleString('en-ZA')}</div>
+        <div style="display:flex;gap:12px;margin-bottom:12px;font-size:0.8rem;color:var(--muted)">
+          <span title="Total views">👁 ${v.views || 0} views</span>
+          <span title="WhatsApp leads">💬 ${v.whatsapp_leads || 0} WhatsApp</span>
+          <span title="Email leads">✉️ ${v.email_leads || 0} email</span>
+        </div>
         <div class="listing-actions">
           <button class="btn-edit" onclick="editListing(${v.id})">Edit</button>
           <button class="btn-del"  onclick="deleteListing(${v.id})">Delete</button>

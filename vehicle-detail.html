@@ -989,6 +989,11 @@ function contactSeller(method) {
   const phone = window._contactPhone || DEFAULT_WHATSAPP;
   const name  = window._contactName  || 'the seller';
 
+  // Track the lead
+  if (vehicleId) {
+    fetch(`${API_BASE}/api/vehicles/${vehicleId}/lead?lead_type=${method}`, { method: 'POST' }).catch(() => {});
+  }
+
   if (method === 'whatsapp') {
     const title = document.getElementById('vehicle-title')?.textContent || 'vehicle';
     const msg = encodeURIComponent(`Hi ${name}, I'm interested in the ${title} listed on pikCarz.`);

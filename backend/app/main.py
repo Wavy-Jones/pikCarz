@@ -77,6 +77,15 @@ async def startup_db():
             conn.execute(text(
                 "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_phone VARCHAR;"
             ))
+            conn.execute(text(
+                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS views INTEGER NOT NULL DEFAULT 0;"
+            ))
+            conn.execute(text(
+                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS whatsapp_leads INTEGER NOT NULL DEFAULT 0;"
+            ))
+            conn.execute(text(
+                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS email_leads INTEGER NOT NULL DEFAULT 0;"
+            ))
             conn.commit()
     except Exception as e:
         # Log but don't crash — tables likely already exist

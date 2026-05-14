@@ -237,8 +237,26 @@ def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
+    # Increment view count
+    vehicle.views = (vehicle.views or 0) + 1
+    db.commit()
+    db.refresh(vehicle)
     owner = db.query(User).filter(User.id == vehicle.owner_id).first()
     return _build_response(vehicle, owner)
+
+
+@router.post("/{vehicle_id}/lead")
+def track_lead(vehicle_id: int, lead_type: str = Query(..., regex="^(whatsapp|email)$"), db: Session = Depends(get_db)):
+    """Track when a buyer clicks WhatsApp or Email on a listing."""
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    if lead_type == "whatsapp":
+        vehicle.whatsapp_leads = (vehicle.whatsapp_leads or 0) + 1
+    else:
+        vehicle.email_leads = (vehicle.email_leads or 0) + 1
+    db.commit()
+    return {"ok": True}
 
 
 @router.put("/{vehicle_id}", response_model=VehicleResponse)

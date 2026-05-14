@@ -60,6 +60,11 @@ class VehicleResponse(VehicleBase):
     is_verified: Optional[bool] = None
     contact_name:  Optional[str] = None
     contact_phone: Optional[str] = None
+
+    # Engagement
+    views:          int = 0
+    whatsapp_leads: int = 0
+    email_leads:    int = 0
     
     class Config:
         from_attributes = True
