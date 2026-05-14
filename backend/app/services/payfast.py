@@ -42,11 +42,9 @@ def generate_payment_data(payment_id: int, amount: float, item_name: str, user_e
         'notify_url':   f'{settings.BACKEND_URL}/api/subscriptions/webhook/payfast',
         'name_first':   name_parts[0],
         'email_address': user_email,
+        'm_payment_id': str(payment_id),
         'amount':       f'{amount:.2f}',
         'item_name':    item_name,
-        'm_payment_id': str(payment_id),
-        'email_confirmation':   '1',
-        'confirmation_address': user_email,
     }
     if len(name_parts) > 1:
         items = list(payment_data.items())
