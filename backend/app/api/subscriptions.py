@@ -247,6 +247,17 @@ async def payfast_webhook(request: Request, db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 
+@router.post("/cancel")
+def cancel_subscription(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Cancel the current user's subscription and revert to free tier."""
+    if current_user.subscription_tier == SubscriptionTier.FREE:
+        raise HTTPException(status_code=400, detail="You are already on the free plan.")
+    current_user.subscription_tier   = SubscriptionTier.FREE
+    current_user.subscription_expires = None
+    db.commit()
+    return {"cancelled": True, "message": "Your subscription has been cancelled. You are now on the free plan."}
+
+
 @router.post("/send-renewal-reminders")
 def send_renewal_reminders(secret: str, db: Session = Depends(get_db)):
     """Called by a cron job to send subscription renewal reminder emails."""

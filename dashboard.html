@@ -371,10 +371,11 @@
           Choose a plan below — your first subscription is <strong style="color:var(--white)">completely free</strong> to try.
         </div>
       </div>
-      <div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
         <button onclick="openPlansModal()" class="sub-upgrade-btn" id="sub-action-btn">
           🚀 View Plans &amp; Start Free Trial
         </button>
+        <button id="sub-cancel-btn" onclick="confirmCancelPlan()" style="display:none;font-size:0.85rem;padding:10px 16px;background:none;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-weight:600">Cancel Plan</button>
       </div>
     </div>
   </div>
@@ -713,6 +714,8 @@ async function loadSubscription() {
       }
       btn.className = 'sub-manage-btn';
       btn.textContent = 'Manage Plan';
+      const cancelBtn = document.getElementById('sub-cancel-btn');
+      if (cancelBtn) cancelBtn.style.display = 'inline-block';
     }
   } catch {
     // Keep default state
@@ -1175,6 +1178,37 @@ window.addEventListener('click', e => {
   if (e.target.id === 'edit-modal')        closeEditModal();
   if (e.target.id === 'sub-confirm-modal') closeSubConfirm();
 });
+
+// ── Cancel Subscription ────────────────────────────────────────────────────────
+function confirmCancelPlan() {
+  if (!confirm('Are you sure you want to cancel your subscription? Your plan will be removed immediately and your active listings may become inactive.')) return;
+  cancelPlan();
+}
+
+async function cancelPlan() {
+  try {
+    const res = await api.post('/api/subscriptions/cancel');
+    showToast(res.message || 'Subscription cancelled.', 'info');
+    // Reset UI
+    _currentTier = null;
+    const card      = document.getElementById('sub-card');
+    const badge     = document.getElementById('sub-trial-badge');
+    const planEl    = document.getElementById('sub-plan');
+    const expiresEl = document.getElementById('sub-expires');
+    const btn       = document.getElementById('sub-action-btn');
+    const cancelBtn = document.getElementById('sub-cancel-btn');
+    card.classList.remove('has-plan');
+    badge.style.display = '';
+    planEl.textContent = 'No Active Plan';
+    expiresEl.innerHTML = 'Choose a plan below — your first subscription is <strong style="color:var(--white)">completely free</strong> to try.';
+    btn.className = 'sub-upgrade-btn';
+    btn.innerHTML = '🚀 View Plans &amp; Start Free Trial';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    loadMyListings();
+  } catch (e) {
+    showToast('Could not cancel subscription: ' + e.message, 'error');
+  }
+}
 
 // ── Favourites ────────────────────────────────────────────────────────
 async function loadFavourites() {
