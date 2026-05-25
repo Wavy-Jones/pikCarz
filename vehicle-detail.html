@@ -960,12 +960,11 @@ function displayVehicle(vehicle) {
   const fcPrice = document.getElementById('fc-price');
   if (fcPrice) { fcPrice.value = vehicle.price; calcFinance(); }
 
-  // Seller info — use contact_name/contact_phone for admin-on-behalf listings,
-  // otherwise fall back to the account owner's seller_name.
-  const displayName  = vehicle.contact_name  || vehicle.seller_name || 'Seller';
-  // Use the listing's contact_phone if set, otherwise default to pikCarz WhatsApp
-  const displayPhone = vehicle.contact_phone
-    ? vehicle.contact_phone.replace(/\D/g, '').replace(/^0/, '27')
+  // Seller info — priority: admin-set contact fields → owner profile → default
+  const displayName  = vehicle.contact_name  || vehicle.seller_name  || 'Seller';
+  const rawPhone     = vehicle.contact_phone || vehicle.seller_phone  || null;
+  const displayPhone = rawPhone
+    ? rawPhone.replace(/\D/g, '').replace(/^0/, '27')
     : DEFAULT_WHATSAPP;
 
   document.getElementById('seller-name').textContent  = displayName;

@@ -1,0 +1,16 @@
+  // Seller info — priority: contact_name/phone (admin-set) → seller_name/seller_phone (owner profile) → defaults
+  const displayName  = vehicle.contact_name  || vehicle.seller_name  || 'Seller';
+  const displayPhone = vehicle.contact_phone || vehicle.seller_phone
+    ? (vehicle.contact_phone || vehicle.seller_phone).replace(/\D/g, '').replace(/^0/, '27')
+    : DEFAULT_WHATSAPP;
+
+  document.getElementById('seller-name').textContent  = displayName;
+  document.getElementById('seller-avatar').textContent = displayName.charAt(0).toUpperCase();
+  if (vehicle.seller_type) {
+    document.getElementById('seller-type').textContent =
+      vehicle.seller_type === 'dealer' ? 'Verified Dealer' : 'Private Seller';
+  }
+
+  // Store contact details for the button handlers
+  window._contactPhone = displayPhone;
+  window._contactName  = displayName;
