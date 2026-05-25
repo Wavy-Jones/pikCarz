@@ -16,6 +16,11 @@ class UserCreate(UserBase):
     business_name: Optional[str] = None
     business_registration: Optional[str] = None
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    business_name: Optional[str] = None
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str

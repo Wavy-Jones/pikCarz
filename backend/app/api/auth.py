@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.models.user import User
 from app.models import UserRole
-from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
+from app.schemas.user import UserCreate, UserLogin, UserResponse, UserUpdate, Token
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.deps import get_current_user
 from app.services.email import send_password_reset_email, send_welcome_email
@@ -86,6 +86,29 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user info"""
+    return current_user
+
+@router.put("/me", response_model=UserResponse)
+def update_profile(
+    update_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user's profile (name, phone, business name)"""
+    if update_data.full_name is not None:
+        stripped = update_data.full_name.strip()
+        if not stripped:
+            raise HTTPException(status_code=400, detail="Name cannot be empty")
+        current_user.full_name = stripped
+
+    if update_data.phone is not None:
+        current_user.phone = update_data.phone.strip() or None
+
+    if update_data.business_name is not None:
+        current_user.business_name = update_data.business_name.strip() or None
+
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 @router.post("/request-password-reset")

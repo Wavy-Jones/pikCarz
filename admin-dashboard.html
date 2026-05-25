@@ -52,7 +52,7 @@
     .s-rejected { color: #ef4444; font-weight: 700; text-transform: uppercase; }
     .s-sold     { color: #3b82f6; font-weight: 700; text-transform: uppercase; }
     .s-expired  { color: #6b7280; font-weight: 700; text-transform: uppercase; }
-    .no-seller-badge {
+    .no-phone-badge {
       display: inline-flex; align-items: center; gap: 4px;
       background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4);
       color: #f59e0b; font-size: 0.75rem; font-weight: 700;
@@ -415,15 +415,37 @@
     _vehicleImagesMap[v.id] = v.images || [];
     _vehicleDataMap[v.id]   = v;
     const isPending = v.status === 'pending';
-    let sellerDisplay;
-    if (v.contact_name) {
-      sellerDisplay = `<strong style="color:var(--white)">${v.contact_name}</strong>`;
+
+    // ── Resolved seller identity ──────────────────────────────────────────────
+    // Priority: admin-set contact fields → owner profile fields → fallback
+    const displayName  = v.contact_name  || v.seller_name  || null;
+    const displayPhone = v.contact_phone || v.seller_phone || null;
+    const displayEmail = v.seller_email  || null;
+
+    // Name line
+    let nameHtml;
+    if (displayName) {
+      const isFromProfile = !v.contact_name && v.seller_name;
+      nameHtml = `<strong style="color:var(--white)">${displayName}</strong>${isFromProfile ? ' <span style="font-size:0.72rem;color:var(--muted)">(account name)</span>' : ''}`;
     } else {
-      sellerDisplay = `<span class="no-seller-badge">⚠️ No seller assigned — use Edit to add contact info</span>`;
+      nameHtml = `<span style="color:#f59e0b;font-weight:600">⚠️ No name — user hasn't set their profile</span>`;
     }
-    const phoneLink = v.contact_phone
-      ? ` — <a href="https://wa.me/${v.contact_phone.replace(/\D/g,'')}" target="_blank" rel="noopener" style="color:#25D366;font-weight:600">📱 ${v.contact_phone}</a>`
+
+    // Phone line
+    let phoneHtml = '';
+    if (displayPhone) {
+      const wa = displayPhone.replace(/\D/g, '');
+      const isFromProfile = !v.contact_phone && v.seller_phone;
+      phoneHtml = ` &nbsp;·&nbsp; <a href="https://wa.me/${wa}" target="_blank" rel="noopener" style="color:#25D366;font-weight:600">📱 ${displayPhone}</a>${isFromProfile ? ' <span style="font-size:0.72rem;color:var(--muted)">(profile phone)</span>' : ''}`;
+    } else {
+      phoneHtml = ` &nbsp;·&nbsp; <span class="no-phone-badge">⚠️ No phone — user must add it in their profile</span>`;
+    }
+
+    // Email line (always from owner account)
+    const emailHtml = displayEmail
+      ? ` &nbsp;·&nbsp; <a href="mailto:${displayEmail}" style="color:var(--accent);font-size:0.82rem">${displayEmail}</a>`
       : '';
+
     const expiryNote = v.expires_at
       ? `<p style="font-size:0.78rem;color:var(--muted)">⏰ Expires: ${new Date(v.expires_at).toLocaleDateString('en-ZA')}</p>`
       : '';
@@ -442,8 +464,8 @@
         <div class="vehicle-info">
           <h4>${v.year} ${v.make} ${v.model}</h4>
           <p><strong>Title:</strong> ${v.title || 'N/A'}</p>
-          <p><strong>Seller:</strong> ${sellerDisplay}${phoneLink}&nbsp;|&nbsp;<strong>Location:</strong> ${v.city || ''}, ${v.province || ''}</p>
-          <p><strong>Price:</strong> <span style="color:var(--accent);font-weight:700">R ${Number(v.price).toLocaleString('en-ZA')}</span>&nbsp;|&nbsp;<strong>Status:</strong> <span style="color:${statusColour[v.status]||'#fff'};font-weight:700;text-transform:uppercase">${v.status}</span></p>
+          <p><strong>Seller:</strong> ${nameHtml}${phoneHtml}${emailHtml}</p>
+          <p><strong>Location:</strong> ${v.city || '—'}, ${v.province || '—'}&nbsp;|&nbsp;<strong>Price:</strong> <span style="color:var(--accent);font-weight:700">R ${Number(v.price).toLocaleString('en-ZA')}</span>&nbsp;|&nbsp;<strong>Status:</strong> <span style="color:${statusColour[v.status]||'#fff'};font-weight:700;text-transform:uppercase">${v.status}</span></p>
           ${expiryNote}${images}
         </div>
         ${actions}
@@ -505,7 +527,6 @@
         if (res.status === 404 || res.status === 405) throw new Error('ENDPOINT_MISSING');
         throw new Error(errBody.detail || `Server error ${res.status}`);
       }
-      // Remove the user row from the table immediately
       document.querySelectorAll('#subscriptions-list tbody tr').forEach(row => {
         if (row.textContent.includes(email)) row.remove();
       });
@@ -513,11 +534,7 @@
       alert(`✅ User "${email}" has been deleted.`);
     } catch (err) {
       if (err.message === 'ENDPOINT_MISSING') {
-        alert(
-          '⚠️ The backend delete-user endpoint is not yet implemented.\n\n' +
-          'Ask your developer to add:\n  DELETE /api/admin/users/{user_id}\n\n' +
-          'It should delete the user and cascade-delete all their listings.'
-        );
+        alert('⚠️ The backend delete-user endpoint is not yet implemented.\n\nAsk your developer to add:\n  DELETE /api/admin/users/{user_id}');
       } else {
         alert('Could not delete user: ' + err.message);
       }
@@ -590,7 +607,6 @@
       contact_phone: document.getElementById('ev-contact-phone').value.trim() || null,
     };
     try {
-      // Upload any new photos first
       let images = [..._adminEditImages];
       const imgInput = document.getElementById('ev-new-images');
       if (imgInput.files.length > 0) {

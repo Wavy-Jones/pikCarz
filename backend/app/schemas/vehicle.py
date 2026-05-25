@@ -55,11 +55,13 @@ class VehicleResponse(VehicleBase):
     expires_at: Optional[datetime]
     
     # Seller info (from owner account or overridden by admin)
-    seller_name: Optional[str] = None
-    seller_type: Optional[str] = None
-    is_verified: Optional[bool] = None
-    contact_name:  Optional[str] = None
-    contact_phone: Optional[str] = None
+    seller_name:  Optional[str] = None   # resolved display name
+    seller_phone: Optional[str] = None   # resolved phone (owner profile or contact_phone)
+    seller_email: Optional[str] = None   # owner account email
+    seller_type:  Optional[str] = None
+    is_verified:  Optional[bool] = None
+    contact_name:  Optional[str] = None  # admin-set override name
+    contact_phone: Optional[str] = None  # admin-set override phone
 
     # Engagement
     views:          int = 0

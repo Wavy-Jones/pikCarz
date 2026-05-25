@@ -202,6 +202,18 @@ const authAPI = {
   async getCurrentUser() {
     return api.get('/api/auth/me');
   },
+
+  // Update user profile (name, phone, business name)
+  async updateProfile(data) {
+    const response = await api.put('/api/auth/me', data);
+    // Keep localStorage in sync so the nav name updates immediately
+    const stored = localStorage.getItem('user_data');
+    if (stored) {
+      const merged = { ...JSON.parse(stored), ...response };
+      localStorage.setItem('user_data', JSON.stringify(merged));
+    }
+    return response;
+  },
   
   // Logout
   logout() {

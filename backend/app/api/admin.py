@@ -17,11 +17,7 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
 def _now_aware():
-    """Return current UTC time as a timezone-aware datetime.
-    Using datetime.utcnow() returns a naive datetime which cannot be compared
-    to timezone-aware datetimes from Postgres (TypeError: can't compare
-    offset-naive and offset-aware datetimes).
-    """
+    """Return current UTC time as a timezone-aware datetime."""
     return datetime.now(tz=timezone.utc)
 
 
@@ -40,6 +36,11 @@ def _vehicle_response(vehicle, owner) -> VehicleResponse:
     resp.is_verified   = bool(owner.is_verified_dealer) if owner and owner.role == "dealer" else False
     resp.contact_name  = vehicle.contact_name or None
     resp.contact_phone = vehicle.contact_phone or None
+    # Resolve the best available phone: admin-set contact_phone takes priority,
+    # then fall back to the owner's profile phone
+    resp.seller_phone  = vehicle.contact_phone or (owner.phone if owner else None) or None
+    # Expose the owner's email so admin can reach them directly
+    resp.seller_email  = owner.email if owner else None
     return resp
 
 
@@ -81,10 +82,6 @@ def get_revenue(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """
-    Monthly revenue breakdown for the last 12 months plus all-time total.
-    Returns completed payments only.
-    """
     try:
         rows = db.execute(
             text("""
@@ -132,11 +129,6 @@ def admin_get_subscriptions(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """
-    Raw SQL with explicit ::text casts on all ENUM columns.
-    PostgreSQL raises 'operator does not exist: userrole != unknown' when you
-    compare an ENUM column directly to a string literal without casting.
-    """
     try:
         now = _now_aware()
         offset = (page - 1) * per_page
@@ -191,7 +183,6 @@ def admin_get_subscriptions(
         results = []
         for row in user_rows:
             uid, full_name, email, role, sub_tier, sub_expires = row
-            # sub_expires from Postgres is timezone-aware; _now_aware() matches it
             is_active = bool(sub_expires and sub_expires > now)
             lp = last_payment.get(uid)
             results.append({
@@ -276,7 +267,6 @@ def approve_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), d
         raise HTTPException(400, f"Cannot approve a vehicle with status '{v.status}'")
     v.status = VehicleStatus.ACTIVE
     db.commit(); db.refresh(v)
-    # Fire search alert emails (best-effort, non-blocking)
     try:
         _notify_search_alerts(v, db)
     except Exception as e:
@@ -285,7 +275,6 @@ def approve_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), d
 
 
 def _notify_search_alerts(vehicle: Vehicle, db: Session):
-    """Send email to users whose search alerts match this newly approved vehicle."""
     from app.models.search_alert import SearchAlert
     from app.services.email import send_email
     alerts = db.query(SearchAlert).all()
@@ -342,10 +331,6 @@ def admin_delete_vehicle(vehicle_id: int, current_admin=Depends(get_current_admi
 
 @router.delete("/users/{user_id}")
 def admin_delete_user(user_id: int, current_admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
-    """
-    Admin: permanently delete a user account and all their listings.
-    Cannot delete other admins.
-    """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(404, "User not found")
@@ -353,7 +338,6 @@ def admin_delete_user(user_id: int, current_admin: User = Depends(get_current_ad
         raise HTTPException(403, "Cannot delete admin accounts")
     if user.id == current_admin.id:
         raise HTTPException(400, "Cannot delete your own account")
-    # Vehicles cascade-delete via FK; payments stay for audit trail
     db.delete(user)
     db.commit()
     return {"message": f"User {user.email} deleted"}
