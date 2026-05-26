@@ -163,8 +163,37 @@
 <div id="admin-listing-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;position:relative;">
     <button onclick="closeAdminListingModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer">&times;</button>
-    <h2 style="margin-bottom:6px;color:var(--white)">Add Free Listing</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px">Admin listing — auto-expires in 6 months.</p>
+    <h2 style="margin-bottom:16px;color:var(--white)" id="admin-modal-title">Add Listing</h2>
+
+    <!-- ── Mode toggle ── -->
+    <div style="display:flex;margin-bottom:20px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <button type="button" id="mode-self-btn" onclick="setListingMode('self')" style="flex:1;padding:11px 16px;background:var(--accent);color:#fff;border:none;font-weight:700;font-size:0.88rem;cursor:pointer">🙋 For Myself (Free)</button>
+      <button type="button" id="mode-client-btn" onclick="setListingMode('client')" style="flex:1;padding:11px 16px;background:var(--surface);color:var(--muted);border:none;border-left:1px solid var(--border);font-weight:600;font-size:0.88rem;cursor:pointer">👤 For a Client (Select Plan)</button>
+    </div>
+
+    <!-- Self mode note -->
+    <div id="mode-self-note" style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:8px;margin-bottom:20px;font-size:0.83rem;color:#10b981">
+      <span style="flex-shrink:0">✅</span>
+      <span>Free listing posted under your admin account — auto-expires in 6 months. No client contact fields needed.</span>
+    </div>
+
+    <!-- Client mode section -->
+    <div id="mode-client-section" style="display:none;margin-bottom:20px">
+      <div style="padding:12px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:8px;margin-bottom:14px;font-size:0.83rem;color:#60a5fa">
+        ℹ️ Select the plan the client is subscribing to. This is for your records — collect payment before creating the listing.
+      </div>
+      <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Client's Subscription Plan *</label>
+      <select id="al-client-plan" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+        <option value="">Select a plan…</option>
+        <option value="free">Free — R0/month · 1 listing · 30 days</option>
+        <option value="standard">Standard — R199/month · 5 listings · 60 days</option>
+        <option value="premium">Premium — R499/month · 15 listings · 90 days</option>
+        <option value="dealer_basic">Dealer Basic — R999/month · 50 listings</option>
+        <option value="dealer_pro">Dealer Pro — R1,999/month · 200 listings</option>
+      </select>
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:6px">💡 The selected plan will be noted in the listing description for your reference.</p>
+    </div>
+
     <form id="admin-create-form" onsubmit="handleAdminCreate(event)">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Make *</label>
@@ -207,12 +236,12 @@
           </select></div>
       </div>
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">City *</label><input type="text" id="al-city" placeholder="e.g. Johannesburg" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
-      <div style="background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.35);border-radius:10px;padding:16px 18px;margin-bottom:16px">
-        <p style="color:var(--accent);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">👤 Seller Information (Required for on-behalf listings)</p>
-        <p style="color:var(--muted);font-size:0.78rem;margin-bottom:14px">Always fill this in so buyers can contact the actual seller — not pikCarz admin.</p>
+      <div id="al-contact-section" style="display:none;background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.35);border-radius:10px;padding:16px 18px;margin-bottom:16px">
+        <p style="color:var(--accent);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">👤 Client Contact Details</p>
+        <p style="color:var(--muted);font-size:0.78rem;margin-bottom:14px">Buyers will contact this person directly — not pikCarz admin.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller Name *</label><input type="text" id="al-contact-name" placeholder="e.g. John Dlamini" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid rgba(255,69,69,0.4);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
-          <div><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller WhatsApp *</label><input type="tel" id="al-contact-phone" placeholder="e.g. 083 943 8885" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid rgba(255,69,69,0.4);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+          <div><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Client Name *</label><input type="text" id="al-contact-name" placeholder="e.g. John Dlamini" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid rgba(255,69,69,0.4);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+          <div><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Client WhatsApp *</label><input type="tel" id="al-contact-phone" placeholder="e.g. 083 943 8885" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid rgba(255,69,69,0.4);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
         </div>
         <p style="color:var(--muted);font-size:0.78rem;margin-top:10px">Buyers will see this name and WhatsApp this number on the listing detail page.</p>
       </div>
@@ -705,9 +734,18 @@
       title:         document.getElementById('al-title').value,
       description:   document.getElementById('al-description').value,
       images:        [],
-      contact_name:  document.getElementById('al-contact-name').value.trim() || null,
-      contact_phone: document.getElementById('al-contact-phone').value.trim() || null,
+      contact_name:  _adminListingMode === 'client' ? (document.getElementById('al-contact-name').value.trim() || null) : null,
+      contact_phone: _adminListingMode === 'client' ? (document.getElementById('al-contact-phone').value.trim() || null) : null,
     };
+
+    // In client mode, append the selected plan to the description as an admin note
+    if (_adminListingMode === 'client') {
+      const planSel = document.getElementById('al-client-plan');
+      const planLabel = planSel.options[planSel.selectedIndex]?.text || '';
+      if (planLabel) {
+        payload.description = `[Admin note — Client plan: ${planLabel}]\n\n${payload.description}`;
+      }
+    }
 
     async function fetchWithRetry(url, options, ms = 20000) {
       for (let attempt = 1; attempt <= 2; attempt++) {
@@ -805,6 +843,50 @@
     }
   }
 
+  /* ── Add Listing modal ──────────────────── */
+  let _adminListingMode = 'self';
+
+  function setListingMode(mode) {
+    _adminListingMode = mode;
+    const selfBtn     = document.getElementById('mode-self-btn');
+    const clientBtn   = document.getElementById('mode-client-btn');
+    const selfNote    = document.getElementById('mode-self-note');
+    const clientSect  = document.getElementById('mode-client-section');
+    const contactSect = document.getElementById('al-contact-section');
+    const planSel     = document.getElementById('al-client-plan');
+    const nameInput   = document.getElementById('al-contact-name');
+    const phoneInput  = document.getElementById('al-contact-phone');
+    const title       = document.getElementById('admin-modal-title');
+    const createBtn   = document.getElementById('admin-create-btn');
+    if (mode === 'self') {
+      title.textContent = 'Add Free Listing (For Myself)';
+      selfBtn.style.background  = 'var(--accent)'; selfBtn.style.color  = '#fff';
+      clientBtn.style.background = 'var(--surface)'; clientBtn.style.color = 'var(--muted)';
+      selfNote.style.display    = 'flex';
+      clientSect.style.display  = 'none';
+      contactSect.style.display = 'none';
+      nameInput.required  = false;
+      phoneInput.required = false;
+      planSel.required    = false;
+      createBtn.textContent = 'Create Free Listing';
+    } else {
+      title.textContent = 'Add Client Listing (Select Plan)';
+      selfBtn.style.background  = 'var(--surface)'; selfBtn.style.color  = 'var(--muted)';
+      clientBtn.style.background = '#3b82f6'; clientBtn.style.color = '#fff';
+      selfNote.style.display    = 'none';
+      clientSect.style.display  = 'block';
+      contactSect.style.display = 'block';
+      nameInput.required  = true;
+      phoneInput.required = true;
+      planSel.required    = true;
+      createBtn.textContent = 'Create Client Listing';
+    }
+  }
+
+  function openAdminListingModal() {
+    document.getElementById('admin-listing-modal').style.display = 'flex';
+    setListingMode('self');
+  }
   document.getElementById('admin-listing-modal').addEventListener('click', function(e) { if (e.target === this) closeAdminListingModal(); });
   document.getElementById('edit-vehicle-modal').addEventListener('click',  function(e) { if (e.target === this) closeEditModal(); });
 </script>
