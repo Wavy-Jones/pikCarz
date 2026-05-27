@@ -100,6 +100,27 @@ def get_upload_signature(current_user: User = Depends(get_current_user)):
     }
 
 
+@router.post("/upload-report-signature")
+def get_report_upload_signature(current_user: User = Depends(get_current_user)):
+    """
+    Return a signed Cloudinary upload signature for raw file uploads
+    (PDFs, Word docs). Uses a separate folder and resource_type=raw.
+    """
+    timestamp = int(time.time())
+    folder = "pikcarz/reports"
+    params_to_sign = f"folder={folder}&timestamp={timestamp}"
+    signature = hashlib.sha1(
+        f"{params_to_sign}{settings.CLOUDINARY_API_SECRET}".encode("utf-8")
+    ).hexdigest()
+    return {
+        "timestamp": timestamp,
+        "signature": signature,
+        "cloud_name": settings.CLOUDINARY_CLOUD_NAME,
+        "api_key": settings.CLOUDINARY_API_KEY,
+        "folder": folder,
+    }
+
+
 # ── Create Vehicle ────────────────────────────────────────────────────────────
 
 @router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
@@ -130,6 +151,7 @@ def create_vehicle(
         province=vehicle_data.province,
         city=vehicle_data.city,
         images=vehicle_data.images or [],
+        report_url=vehicle_data.report_url or None,
         contact_name=vehicle_data.contact_name or None,
         contact_phone=vehicle_data.contact_phone or None,
         status=VehicleStatus.PENDING,

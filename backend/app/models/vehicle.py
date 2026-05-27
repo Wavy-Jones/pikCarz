@@ -34,6 +34,9 @@ class Vehicle(Base):
     
     # Images (Cloudinary URLs as JSON array)
     images = Column(JSON, default=list)
+
+    # Vehicle report (Cloudinary raw URL — PDF/doc, optional)
+    report_url = Column(String, nullable=True)
     
     # Custom contact details (set by admin when listing on behalf of a seller)
     contact_name  = Column(String, nullable=True)

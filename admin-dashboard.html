@@ -248,6 +248,14 @@
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label><input type="text" id="al-title" placeholder="e.g. Toyota Bakkie" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"><p style="font-size:0.8rem;color:var(--muted);margin-top:4px">💡 Include vehicle type in the title.</p></div>
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description *</label><textarea id="al-description" rows="4" placeholder="Describe the vehicle — condition, service history, extras, reason for selling…" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea></div>
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Photos <span style="color:var(--muted);font-weight:400;font-size:0.78rem">(max 10)</span></label><input type="file" id="al-images" multiple accept="image/*" onchange="adminCreateCheckImages()" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+      <div style="margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">
+          📄 Vehicle Report
+          <span style="font-weight:400;font-size:0.78rem;color:var(--muted)">(optional — PDF or Word)</span>
+        </label>
+        <input type="file" id="al-report" accept=".pdf,.doc,.docx" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Inspection report, AA VIN check, or service history PDF. Buyers will see a “Download Report” button.</p>
+      </div>
       <div id="admin-create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
       <div style="display:flex;gap:12px;margin-top:8px">
         <button type="button" onclick="closeAdminListingModal()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
@@ -282,7 +290,10 @@
         <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller Name</label><input type="text" id="ev-contact-name" placeholder="e.g. John Dlamini" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
         <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Seller WhatsApp</label><input type="tel" id="ev-contact-phone" placeholder="e.g. 083 943 8885" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
       </div>
-      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description</label><textarea id="ev-description" rows="4" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea></div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description</label>
+        <textarea id="ev-description" rows="4" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea>
+      </div>
       <!-- Photos -->
       <div style="margin-bottom:16px">
         <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Current Photos <span style="color:var(--muted);font-weight:400;font-size:0.78rem">(click ✕ to remove)</span></label>
@@ -293,6 +304,22 @@
         <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Add New Photos <span id="ev-photo-counter" style="color:var(--muted);font-weight:400;font-size:0.78rem">0 / 10 photos</span></label>
         <input type="file" id="ev-new-images" multiple accept="image/*" onchange="adminCheckNewImages()" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
         <p style="font-size:0.78rem;color:var(--muted);margin-top:6px">&#x1f4cc; Drag the thumbnails above to reorder. The <strong style="color:var(--white)">first photo is the cover</strong> shown in browse results.</p>
+      </div>
+      <!-- Report -->
+      <div style="margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">
+          📄 Vehicle Report
+          <span style="font-weight:400;font-size:0.78rem;color:var(--muted)">(optional — PDF or Word)</span>
+        </label>
+        <div id="ev-report-current" style="display:none;margin-bottom:8px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;align-items:center;justify-content:space-between;gap:10px">
+          <span style="font-size:0.85rem;color:var(--muted)">📄 <span id="ev-report-name">Current report</span></span>
+          <div style="display:flex;gap:8px">
+            <a id="ev-report-link" href="#" target="_blank" style="font-size:0.82rem;color:var(--accent)">View</a>
+            <button type="button" onclick="clearAdminEditReport()" style="font-size:0.78rem;color:#ef4444;background:none;border:none;cursor:pointer;padding:0">Remove</button>
+          </div>
+        </div>
+        <input type="file" id="ev-report" accept=".pdf,.doc,.docx" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Replace or attach an inspection report, AA VIN check, or service history PDF.</p>
       </div>
       <div id="edit-vehicle-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
       <div style="display:flex;gap:12px;margin-top:8px">
@@ -631,6 +658,37 @@
     }
   }
 
+  // ── Admin report upload helper ────────────────────────────────────
+  async function adminUploadReport(fileInputId) {
+    const input = document.getElementById(fileInputId);
+    if (!input || !input.files.length) return null;
+    const file = input.files[0];
+    const sigRes = await fetch(`${API_BASE}/api/vehicles/upload-report-signature`, { method: 'POST', headers: authHeaders() });
+    if (!sigRes.ok) throw new Error('Could not get report upload credentials.');
+    const sig = await sigRes.json();
+    const fd = new FormData();
+    fd.append('file',      file);
+    fd.append('api_key',   sig.api_key);
+    fd.append('timestamp', sig.timestamp);
+    fd.append('signature', sig.signature);
+    fd.append('folder',    sig.folder);
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${sig.cloud_name}/raw/upload`,
+      { method: 'POST', body: fd }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error('Report upload failed: ' + data.error.message);
+    return data.secure_url;
+  }
+
+  let _adminEditReportUrl = null;
+
+  function clearAdminEditReport() {
+    _adminEditReportUrl = null;
+    document.getElementById('ev-report-current').style.display = 'none';
+    document.getElementById('ev-report').value = '';
+  }
+
   function openEditModal(id, title, price, mileage, city, province, description, contactName, contactPhone, images) {
     document.getElementById('edit-vehicle-id').value = id;
     document.getElementById('edit-vehicle-subtitle').textContent = `Editing listing #${id}`;
@@ -647,6 +705,19 @@
     }
     document.getElementById('edit-vehicle-error').style.display = 'none';
     document.getElementById('ev-new-images').value = '';
+    // Report
+    const v = _vehicleDataMap[id] || {};
+    _adminEditReportUrl = v.report_url || null;
+    const reportCurrent = document.getElementById('ev-report-current');
+    if (_adminEditReportUrl) {
+      const fname = _adminEditReportUrl.split('/').pop().split('?')[0];
+      document.getElementById('ev-report-name').textContent = decodeURIComponent(fname);
+      document.getElementById('ev-report-link').href = _adminEditReportUrl;
+      reportCurrent.style.display = 'flex';
+    } else {
+      reportCurrent.style.display = 'none';
+    }
+    document.getElementById('ev-report').value = '';
     _adminEditImages = Array.isArray(images) ? [...images] : [];
     renderAdminEditImages();
     document.getElementById('edit-vehicle-modal').style.display = 'flex';
@@ -699,6 +770,9 @@
       }
       payload.images = images;
       btn.textContent = 'Saving…';
+      // Report: upload new, keep existing, or clear
+      const newReport = await adminUploadReport('ev-report');
+      payload.report_url = newReport !== null ? newReport : _adminEditReportUrl;
       const res = await fetch(`${API_BASE}/api/admin/vehicles/${id}/edit`, {
         method: 'PUT',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
@@ -861,6 +935,12 @@
         payload.images = imageUrls;
         btn.textContent = 'Creating listing…';
       }
+
+      // Upload report if provided (optional)
+      btn.textContent = 'Uploading report…';
+      const reportUrl = await adminUploadReport('al-report');
+      if (reportUrl) payload.report_url = reportUrl;
+      btn.textContent = 'Creating listing…';
 
       const res = await fetchWithRetry(`${API_BASE}/api/vehicles`, {
         method: 'POST',

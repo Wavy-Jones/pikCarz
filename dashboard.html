@@ -289,6 +289,16 @@
         </div>
       </div>
 
+      <!-- ── Report Upload ── -->
+      <div class="form-group" style="margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px">
+          📄 Vehicle Report
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(optional — PDF or Word)</span>
+        </label>
+        <input type="file" id="v-report" accept=".pdf,.doc,.docx">
+        <p class="form-hint">Attach an inspection report, AA VIN check, or service history document. Buyers will see a “Download Report” button on the listing.</p>
+      </div>
+
       <!-- ── Contact Details ── -->
       <div class="contact-section">
         <p class="contact-section-label">📱 Your Contact Details</p>
@@ -422,6 +432,23 @@
         <label>Add New Photos (max 10 total)</label>
         <input type="file" id="edit-images" multiple accept="image/*" onchange="checkEditPhotoLimit(this)">
         <p class="form-hint">📌 Drag thumbnails above to reorder. The <strong>first photo is the cover</strong> shown in search results.</p>
+      </div>
+
+      <!-- ── Report Upload ── -->
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px">
+          📄 Vehicle Report
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(optional — PDF or Word)</span>
+        </label>
+        <div id="edit-report-current" style="display:none;margin-bottom:8px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="font-size:0.85rem;color:var(--muted)">📄 <span id="edit-report-name">Current report</span></span>
+          <div style="display:flex;gap:8px">
+            <a id="edit-report-link" href="#" target="_blank" style="font-size:0.82rem;color:var(--accent)">View</a>
+            <button type="button" onclick="clearEditReport()" style="font-size:0.78rem;color:#ef4444;background:none;border:none;cursor:pointer;padding:0">Remove</button>
+          </div>
+        </div>
+        <input type="file" id="edit-report" accept=".pdf,.doc,.docx">
+        <p class="form-hint">Replace or attach an inspection report, AA VIN check, or service history document.</p>
       </div>
 
       <!-- ── Contact Details ── -->
@@ -698,6 +725,35 @@ function checkCreatePhotoLimit(input) {
   }
 }
 
+// ── Report upload helper ──────────────────────────────────────────────
+async function uploadReport(fileInputId) {
+  const input = document.getElementById(fileInputId);
+  if (!input || !input.files.length) return null; // optional — skip if empty
+  const file = input.files[0];
+  const sig = await api.post('/api/vehicles/upload-report-signature');
+  const fd = new FormData();
+  fd.append('file',      file);
+  fd.append('api_key',   sig.api_key);
+  fd.append('timestamp', sig.timestamp);
+  fd.append('signature', sig.signature);
+  fd.append('folder',    sig.folder);
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${sig.cloud_name}/raw/upload`,
+    { method: 'POST', body: fd }
+  );
+  const data = await res.json();
+  if (data.error) throw new Error('Report upload failed: ' + data.error.message);
+  return data.secure_url;
+}
+
+let _editReportUrl = null; // tracks current report URL in edit modal
+
+function clearEditReport() {
+  _editReportUrl = null;
+  document.getElementById('edit-report-current').style.display = 'none';
+  document.getElementById('edit-report').value = '';
+}
+
 async function handleCreate(e) {
   e.preventDefault();
   const errDiv = document.getElementById('create-error');
@@ -782,6 +838,12 @@ async function handleCreate(e) {
       btn.textContent = 'Creating listing…';
     }
 
+    // Upload report if provided (optional)
+    btn.textContent = 'Uploading report…';
+    const reportUrl = await uploadReport('v-report');
+    if (reportUrl) payload.report_url = reportUrl;
+    btn.textContent = 'Creating listing…';
+
     await api.post('/api/vehicles', payload);
     closeCreateModal();
     document.getElementById('create-form').reset();
@@ -836,6 +898,19 @@ async function openEditModal(id) {
     const u = JSON.parse(localStorage.getItem('user_data') || '{}');
     document.getElementById('edit-contact-name').value  = v.contact_name  || u.full_name || '';
     document.getElementById('edit-contact-phone').value = v.contact_phone || u.phone     || '';
+
+    // Report
+    _editReportUrl = v.report_url || null;
+    const reportCurrent = document.getElementById('edit-report-current');
+    if (_editReportUrl) {
+      const fname = _editReportUrl.split('/').pop().split('?')[0];
+      document.getElementById('edit-report-name').textContent = decodeURIComponent(fname);
+      document.getElementById('edit-report-link').href = _editReportUrl;
+      reportCurrent.style.display = 'flex';
+    } else {
+      reportCurrent.style.display = 'none';
+    }
+    document.getElementById('edit-report').value = '';
 
     _editExistingImages = v.images ? [...v.images] : [];
     renderEditImages();
@@ -933,6 +1008,11 @@ async function handleEdit(e) {
       }
     }
     btn.textContent = 'Saving changes…';
+
+    // Upload new report if provided; keep existing if not; clear if removed
+    const newReportUrl = await uploadReport('edit-report');
+    const finalReportUrl = newReportUrl !== null ? newReportUrl : _editReportUrl;
+
     await api.put(`/api/vehicles/${id}`, {
       make:          document.getElementById('edit-make').value,
       model:         document.getElementById('edit-model').value,
@@ -948,6 +1028,7 @@ async function handleEdit(e) {
       description:   document.getElementById('edit-description').value,
       contact_name:  document.getElementById('edit-contact-name').value.trim()  || null,
       contact_phone: document.getElementById('edit-contact-phone').value.trim() || null,
+      report_url:    finalReportUrl || null,
       images,
     });
     closeEditModal();

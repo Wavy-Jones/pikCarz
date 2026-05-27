@@ -682,6 +682,19 @@
               Email Enquiry
             </button>
 
+            <!-- Report download (only shown when report_url is set) -->
+            <a id="btn-report" href="#" target="_blank" rel="noopener"
+              class="btn-contact btn-contact-secondary"
+              style="display:none;text-decoration:none;justify-content:center">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              Download Report
+            </a>
+
             <button class="btn-contact btn-contact-secondary" onclick="document.getElementById('finance-calculator').scrollIntoView({behavior:'smooth'})">
               <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
               Finance Calculator
@@ -977,6 +990,13 @@ function displayVehicle(vehicle) {
   // Store contact details for the button handlers
   window._contactPhone = displayPhone;
   window._contactName  = displayName;
+
+  // Show report download button if a report is attached
+  const reportBtn = document.getElementById('btn-report');
+  if (vehicle.report_url && reportBtn) {
+    reportBtn.href = vehicle.report_url;
+    reportBtn.style.display = 'flex';
+  }
 }
 
 function showError() {

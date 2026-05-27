@@ -13,8 +13,8 @@ class VehicleBase(BaseModel):
     category: str  # new_car, used_car, motorbike, truck, other
     price: Decimal = Field(..., gt=0)
     mileage: Optional[int] = Field(None, ge=0)
-    transmission: Optional[str] = None  # Auto, Manual, Semi-Auto
-    fuel_type: Optional[str] = None  # Petrol, Diesel, Electric, Hybrid
+    transmission: Optional[str] = None
+    fuel_type: Optional[str] = None
     color: Optional[str] = None
     title: str
     description: Optional[str] = None
@@ -22,9 +22,10 @@ class VehicleBase(BaseModel):
     city: Optional[str] = None
 
 class VehicleCreate(VehicleBase):
-    images: Optional[List[str]] = []  # Accept pre-uploaded Cloudinary URLs
-    contact_name:  Optional[str] = None  # Custom seller name (admin use)
-    contact_phone: Optional[str] = None  # Custom seller phone (admin use)
+    images: Optional[List[str]] = []
+    report_url: Optional[str] = None       # optional inspection/service report
+    contact_name:  Optional[str] = None    # admin on-behalf override
+    contact_phone: Optional[str] = None
 
 class VehicleUpdate(BaseModel):
     make: Optional[str] = None
@@ -39,8 +40,8 @@ class VehicleUpdate(BaseModel):
     description: Optional[str] = None
     province: Optional[str] = None
     city: Optional[str] = None
-    images: Optional[List[str]] = None  # Full replacement of image array
-    # Admin can update seller contact info via the edit modal
+    images: Optional[List[str]] = None
+    report_url: Optional[str] = None       # None = no change; "" = clear
     contact_name:  Optional[str] = None
     contact_phone: Optional[str] = None
 
@@ -48,26 +49,27 @@ class VehicleResponse(VehicleBase):
     id: int
     owner_id: int
     images: List[str]
+    report_url: Optional[str] = None
     status: str
     is_featured: bool
     created_at: datetime
     updated_at: Optional[datetime]
     expires_at: Optional[datetime]
-    
-    # Seller info (from owner account or overridden by admin)
-    seller_name:  Optional[str] = None   # resolved display name
-    seller_phone: Optional[str] = None   # resolved phone (owner profile or contact_phone)
-    seller_email: Optional[str] = None   # owner account email
+
+    # Seller info
+    seller_name:  Optional[str] = None
+    seller_phone: Optional[str] = None
+    seller_email: Optional[str] = None
     seller_type:  Optional[str] = None
     is_verified:  Optional[bool] = None
-    contact_name:  Optional[str] = None  # admin-set override name
-    contact_phone: Optional[str] = None  # admin-set override phone
+    contact_name:  Optional[str] = None
+    contact_phone: Optional[str] = None
 
     # Engagement
     views:          int = 0
     whatsapp_leads: int = 0
     email_leads:    int = 0
-    
+
     class Config:
         from_attributes = True
 
