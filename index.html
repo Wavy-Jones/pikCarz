@@ -111,6 +111,7 @@
       </div>
     </div>
   </div>
+
 </section>
 
 <!-- ── Featured Listings (tight — right below hero) ── -->
@@ -310,6 +311,12 @@ window.toggleSave = function(btn) {
           </div>
         </article>`;
     }).join('');
+
+    // Browse all button
+    const browseRow = document.createElement('div');
+    browseRow.style.cssText = 'grid-column:1/-1;text-align:center;margin-top:16px;padding-top:8px';
+    browseRow.innerHTML = `<a href="browse.html" class="btn-primary" style="display:inline-flex;align-items:center;gap:10px;padding:16px 40px;font-size:1rem;font-weight:700;border-radius:10px;text-decoration:none">Browse All Vehicles <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>`;
+    grid.appendChild(browseRow);
   } catch(e) {
     grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">Could not load listings right now. <a href="browse.html" style="color:var(--accent)">Try Browse</a></p>';
   }
