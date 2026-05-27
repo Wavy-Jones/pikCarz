@@ -34,6 +34,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         role=UserRole.DEALER if user_data.role == "dealer" else UserRole.INDIVIDUAL,
         business_name=user_data.business_name,
         business_registration=user_data.business_registration,
+        dealer_address=user_data.dealer_address,
     )
     
     db.add(new_user)
@@ -106,6 +107,9 @@ def update_profile(
 
     if update_data.business_name is not None:
         current_user.business_name = update_data.business_name.strip() or None
+
+    if update_data.dealer_address is not None:
+        current_user.dealer_address = update_data.dealer_address.strip() or None
 
     db.commit()
     db.refresh(current_user)

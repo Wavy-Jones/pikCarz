@@ -26,6 +26,7 @@ class User(Base):
     # Dealer-specific
     business_name = Column(String, nullable=True)
     business_registration = Column(String, nullable=True)
+    dealer_address = Column(String, nullable=True)
     is_verified_dealer = Column(Boolean, default=False)
     
     # Status

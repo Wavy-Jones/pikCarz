@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -9,96 +8,154 @@
   <link rel="stylesheet" href="css/styles.css" />
   <style>
     .signin-container {
-      max-width: 480px;
-      margin: 100px auto;
+      max-width: 520px;
+      margin: 60px auto;
       padding: 48px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
     }
+    .signin-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .signin-logo img {
+      height: 48px;
+      width: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      object-fit: cover;
+    }
+    .signin-container h1 {
+      text-align: center;
+      margin-bottom: 24px;
+      color: var(--white);
+      font-size: 1.8rem;
+    }
+    .error-message {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--white);
+      font-size: 1rem;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
 
+    /* Account type toggle */
+    .account-type-toggle {
+      display: flex;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .account-type-toggle button {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .account-type-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .account-type-toggle button:not(.active) {
+      background: var(--surface);
+      color: var(--muted);
+    }
+    .account-type-toggle button:not(:last-child) {
+      border-right: 1px solid var(--border);
+    }
 
-.signin-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 40px;
-}
+    /* Dealer section */
+    .dealer-section {
+      display: none;
+      background: rgba(255,69,69,0.05);
+      border: 1px solid rgba(255,69,69,0.25);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .dealer-section.visible { display: block; }
+    .dealer-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+    .dealer-section .form-group { margin-bottom: 14px; }
+    .dealer-section .form-group:last-child { margin-bottom: 0; }
 
-.signin-logo img {
-  height: 48px;
-  width: 48px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  object-fit: cover;
-}
-
-.signin-container h1 {
-  text-align: center;
-  margin-bottom: 16px;
-  color: var(--white);
-  font-size: 1.8rem;
-}
-
-.error-message {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid #ef4444;
-  color: #ef4444;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-size: 0.9rem;
-  display: none;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--white);
-  font-size: 1rem;
-}
-
-.signin-btn {
-  width: 100%;
-  padding: 16px;
-  background: var(--accent);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-top: 8px;
-}
-
-.signin-footer {
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.signin-footer a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-
+    .signin-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .signin-btn:hover { opacity: 0.9; }
+    .signin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .signin-footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 24px;
+    }
+    .signin-footer a { color: var(--accent); text-decoration: none; }
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 48px; }
+    .pw-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+    .pw-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .pw-toggle:hover { color: var(--white); }
   </style>
 </head>
 <body>
@@ -113,35 +170,74 @@
 
   <div id="error-message" class="error-message"></div>
 
+  <!-- Account type -->
+  <div class="account-type-toggle">
+    <button type="button" id="btn-individual" class="active" onclick="setAccountType('individual')">
+      👤 Individual Seller
+    </button>
+    <button type="button" id="btn-dealer" onclick="setAccountType('dealer')">
+      🏢 Dealership
+    </button>
+  </div>
+
   <form id="register-form">
+    <input type="hidden" id="account-role" value="individual" />
+
+    <!-- Common fields -->
     <div class="form-group">
-      <label for="name">Full Name</label>
-      <input type="text" id="name" required placeholder="John Doe" />
+      <label for="name">Full Name *</label>
+      <input type="text" id="name" required placeholder="John Dlamini" />
     </div>
 
     <div class="form-group">
-      <label for="email">Email Address</label>
+      <label for="phone">Phone / WhatsApp *</label>
+      <input type="tel" id="phone" required placeholder="+27 83 123 4567" />
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email Address *</label>
       <input type="email" id="email" required placeholder="your.email@example.com" />
     </div>
 
     <div class="form-group">
-      <label for="password">Password</label>
+      <label for="password">Password *</label>
       <div class="pw-wrap">
         <input type="password" id="password" required placeholder="Enter password" />
         <button type="button" class="pw-toggle" onclick="togglePw('password', this)" aria-label="Show password">
           <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </div>
-      <small style="display:block;margin-top:6px;color:var(--muted);font-size:0.8rem;">🔒 Use a mix of uppercase, lowercase, numbers &amp; special characters (e.g. <code>P@ssw0rd!</code>) for a strong password.</small>
+      <small style="display:block;margin-top:6px;color:var(--muted);font-size:0.8rem;">🔒 Mix of uppercase, lowercase, numbers &amp; special characters (e.g. <code>P@ssw0rd!</code>)</small>
     </div>
 
     <div class="form-group">
-      <label for="confirm-password">Confirm Password</label>
+      <label for="confirm-password">Confirm Password *</label>
       <div class="pw-wrap">
         <input type="password" id="confirm-password" required placeholder="Confirm password" />
         <button type="button" class="pw-toggle" onclick="togglePw('confirm-password', this)" aria-label="Show password">
           <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
+      </div>
+    </div>
+
+    <!-- Dealer-only fields -->
+    <div class="dealer-section" id="dealer-section">
+      <p class="dealer-section-title">🏢 Dealership Details</p>
+
+      <div class="form-group">
+        <label for="business-name">Dealership / Business Name *</label>
+        <input type="text" id="business-name" placeholder="e.g. ABC Motors" />
+      </div>
+
+      <div class="form-group">
+        <label for="business-reg">Business Registration Number <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input type="text" id="business-reg" placeholder="e.g. 2019/123456/07" />
+      </div>
+
+      <div class="form-group">
+        <label for="dealer-address">Dealership Address *</label>
+        <textarea id="dealer-address" placeholder="123 Main Street, Sandton, Gauteng, 2196"></textarea>
+        <small style="color:var(--muted);font-size:0.8rem;margin-top:4px;display:block">This is shown to buyers on your listings so they know where to find you.</small>
       </div>
     </div>
 
@@ -157,6 +253,35 @@
 
 <script>
 const API_BASE = 'https://pikcarz.vercel.app';
+let _accountType = 'individual';
+
+function setAccountType(type) {
+  _accountType = type;
+  document.getElementById('account-role').value = type;
+
+  const btnInd    = document.getElementById('btn-individual');
+  const btnDealer = document.getElementById('btn-dealer');
+  const dealerSec = document.getElementById('dealer-section');
+  const bizName   = document.getElementById('business-name');
+  const dealerAddr = document.getElementById('dealer-address');
+  const btn       = document.getElementById('register-btn');
+
+  if (type === 'dealer') {
+    btnInd.classList.remove('active');
+    btnDealer.classList.add('active');
+    dealerSec.classList.add('visible');
+    bizName.required   = true;
+    dealerAddr.required = true;
+    btn.textContent = 'Create Dealership Account';
+  } else {
+    btnDealer.classList.remove('active');
+    btnInd.classList.add('active');
+    dealerSec.classList.remove('visible');
+    bizName.required   = false;
+    dealerAddr.required = false;
+    btn.textContent = 'Create Account';
+  }
+}
 
 function togglePw(inputId, btn) {
   const input = document.getElementById(inputId);
@@ -171,31 +296,57 @@ function togglePw(inputId, btn) {
 document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const name = document.getElementById('name').value;
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+  const name            = document.getElementById('name').value.trim();
+  const phone           = document.getElementById('phone').value.trim();
+  const email           = document.getElementById('email').value.trim();
+  const password        = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirm-password').value;
-  const errorDiv = document.getElementById('error-message');
-  const btn = document.getElementById('register-btn');
+  const role            = _accountType;
+  const businessName    = document.getElementById('business-name').value.trim();
+  const businessReg     = document.getElementById('business-reg').value.trim();
+  const dealerAddress   = document.getElementById('dealer-address').value.trim();
 
+  const errorDiv = document.getElementById('error-message');
+  const btn      = document.getElementById('register-btn');
   errorDiv.style.display = 'none';
 
   if (password !== confirmPassword) {
-    errorDiv.textContent = 'Passwords do not match';
+    errorDiv.textContent = 'Passwords do not match.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
+  if (role === 'dealer' && !businessName) {
+    errorDiv.textContent = 'Please enter your dealership name.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
+  if (role === 'dealer' && !dealerAddress) {
+    errorDiv.textContent = 'Please enter your dealership address.';
     errorDiv.style.display = 'block';
     return;
   }
 
   btn.disabled = true;
-  btn.textContent = 'Creating account...';
+  btn.textContent = 'Creating account…';
 
   try {
+    const body = {
+      full_name:             name,
+      phone:                 phone || null,
+      email,
+      password,
+      role,
+      business_name:         role === 'dealer' ? businessName    : null,
+      business_registration: role === 'dealer' ? businessReg     : null,
+      dealer_address:        role === 'dealer' ? dealerAddress   : null,
+    };
+
     const response = await fetch(`${API_BASE}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ full_name: name, email, password })
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -203,21 +354,16 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
       throw new Error(error.detail || 'Registration failed');
     }
 
-    // Success
     const data = await response.json();
-
-    // Save token
     localStorage.setItem('auth_token', data.access_token);
     localStorage.setItem('user_data', JSON.stringify(data.user));
-
-    // Redirect to dashboard
     window.location.href = 'dashboard.html';
 
   } catch (error) {
     errorDiv.textContent = error.message;
     errorDiv.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Create Account';
+    btn.textContent = role === 'dealer' ? 'Create Dealership Account' : 'Create Account';
   }
 });
 </script>

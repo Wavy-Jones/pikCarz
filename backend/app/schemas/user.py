@@ -9,17 +9,19 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     phone: Optional[str] = None
-    
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
     role: str = "individual"  # individual or dealer
     business_name: Optional[str] = None
     business_registration: Optional[str] = None
+    dealer_address: Optional[str] = None
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     business_name: Optional[str] = None
+    dealer_address: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -31,10 +33,12 @@ class UserResponse(UserBase):
     subscription_tier: str
     subscription_expires: Optional[datetime]
     business_name: Optional[str]
+    business_registration: Optional[str]
+    dealer_address: Optional[str]
     is_verified_dealer: bool
     is_active: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
