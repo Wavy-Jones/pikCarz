@@ -247,7 +247,7 @@
       </div>
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Listing Title *</label><input type="text" id="al-title" placeholder="e.g. Toyota Bakkie" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"><p style="font-size:0.8rem;color:var(--muted);margin-top:4px">💡 Include vehicle type in the title.</p></div>
       <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Description *</label><textarea id="al-description" rows="4" placeholder="Describe the vehicle — condition, service history, extras, reason for selling…" required style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea></div>
-      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Photos (max 10)</label><input type="file" id="al-images" multiple accept="image/*" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
+      <div style="margin-bottom:16px"><label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Photos <span style="color:var(--muted);font-weight:400;font-size:0.78rem">(max 10)</span></label><input type="file" id="al-images" multiple accept="image/*" onchange="adminCreateCheckImages()" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem"></div>
       <div id="admin-create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
       <div style="display:flex;gap:12px;margin-top:8px">
         <button type="button" onclick="closeAdminListingModal()" class="btn-ghost" style="flex:1;padding:12px">Cancel</button>
@@ -290,8 +290,9 @@
         <p id="ev-no-images" style="color:var(--muted);font-size:0.85rem;display:none">No photos uploaded yet.</p>
       </div>
       <div style="margin-bottom:16px">
-        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Add New Photos <span style="color:var(--muted);font-weight:400;font-size:0.78rem">(max 10 total)</span></label>
-        <input type="file" id="ev-new-images" multiple accept="image/*" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Add New Photos <span id="ev-photo-counter" style="color:var(--muted);font-weight:400;font-size:0.78rem">0 / 10 photos</span></label>
+        <input type="file" id="ev-new-images" multiple accept="image/*" onchange="adminCheckNewImages()" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:6px">&#x1f4cc; Drag the thumbnails above to reorder. The <strong style="color:var(--white)">first photo is the cover</strong> shown in browse results.</p>
       </div>
       <div id="edit-vehicle-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
       <div style="display:flex;gap:12px;margin-top:8px">
@@ -572,25 +573,62 @@
 
   /* ── Edit Modal ───────────────────────────── */
   let _adminEditImages = [];
+  let _adminDragSrcIdx = null;
 
   function renderAdminEditImages() {
     const container = document.getElementById('ev-existing-images');
     const noMsg     = document.getElementById('ev-no-images');
+    const counter   = document.getElementById('ev-photo-counter');
+    if (counter) counter.textContent = `${_adminEditImages.length} / 10 photos`;
     if (!_adminEditImages.length) { container.innerHTML = ''; noMsg.style.display = 'block'; return; }
     noMsg.style.display = 'none';
     container.innerHTML = _adminEditImages.map((url, i) => `
-      <div style="position:relative;width:80px;height:80px;flex-shrink:0">
-        <img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />
+      <div draggable="true" data-idx="${i}"
+        ondragstart="adminImgDragStart(event,${i})"
+        ondragover="adminImgDragOver(event)"
+        ondrop="adminImgDrop(event,${i})"
+        ondragend="adminImgDragEnd()"
+        style="position:relative;width:80px;height:80px;flex-shrink:0;cursor:grab;transition:opacity 0.15s"
+        title="Drag to reorder">
+        <img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:2px solid ${i===0?'var(--accent)':'var(--border)'};pointer-events:none" />
+        <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:#fff;font-size:0.58rem;font-weight:700;text-align:center;padding:2px 0;border-radius:0 0 4px 4px;pointer-events:none">${i===0?'⭐ COVER':'#'+(i+1)}</div>
         <button type="button" onclick="removeAdminEditImage(${i})"
-          style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.75rem;cursor:pointer;line-height:20px;text-align:center;padding:0">
-          ✕
-        </button>
+          style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.75rem;cursor:pointer;line-height:20px;text-align:center;padding:0;z-index:1">✕</button>
       </div>`).join('');
   }
+
+  function adminImgDragStart(e, idx) {
+    _adminDragSrcIdx = idx;
+    setTimeout(() => { if (e.target) e.target.style.opacity = '0.35'; }, 0);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function adminImgDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+  function adminImgDrop(e, toIdx) {
+    e.preventDefault();
+    if (_adminDragSrcIdx === null || _adminDragSrcIdx === toIdx) return;
+    const moved = _adminEditImages.splice(_adminDragSrcIdx, 1)[0];
+    _adminEditImages.splice(toIdx, 0, moved);
+    _adminDragSrcIdx = null;
+    renderAdminEditImages();
+  }
+  function adminImgDragEnd() { _adminDragSrcIdx = null; renderAdminEditImages(); }
 
   function removeAdminEditImage(index) {
     _adminEditImages.splice(index, 1);
     renderAdminEditImages();
+  }
+
+  function adminCheckNewImages() {
+    const input   = document.getElementById('ev-new-images');
+    const allowed = 10 - _adminEditImages.length;
+    if (allowed <= 0) {
+      alert('This listing already has 10 photos. Remove some before adding new ones.');
+      input.value = '';
+      return;
+    }
+    if (input.files.length > allowed) {
+      alert(`Only ${allowed} more photo${allowed === 1 ? '' : 's'} can be added (10 max total). Only the first ${allowed} will be uploaded.`);
+    }
   }
 
   function openEditModal(id, title, price, mileage, city, province, description, contactName, contactPhone, images) {
@@ -691,6 +729,13 @@
 
   /* ── Add Free Listing (admin on behalf) ────── */
   function openAdminListingModal()  { document.getElementById('admin-listing-modal').style.display = 'flex'; }
+  function adminCreateCheckImages() {
+    const input = document.getElementById('al-images');
+    if (input.files.length > 10) {
+      alert(`Maximum 10 photos allowed — only the first 10 will be uploaded.`);
+    }
+  }
+
   function closeAdminListingModal() {
     document.getElementById('admin-listing-modal').style.display = 'none';
     document.getElementById('admin-create-form').reset();
@@ -795,7 +840,10 @@
           });
         }
         const imageUrls = [];
-        const files = Array.from(imgInput.files);
+        const files = Array.from(imgInput.files).slice(0, 10);
+        if (imgInput.files.length > 10) {
+          btn.textContent = 'Uploading (capped at 10)…';
+        }
         for (let i = 0; i < files.length; i++) {
           btn.textContent = `Uploading photo ${i+1} of ${files.length}…`;
           const compressed = await compressImage(files[i]);
