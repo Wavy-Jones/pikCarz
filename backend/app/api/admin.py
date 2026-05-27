@@ -220,9 +220,19 @@ def admin_list_all_vehicles(
     _purge_expired_admin_listings(db)
     total  = db.query(func.count(Vehicle.id)).scalar() or 0
     offset = (page - 1) * per_page
+    from sqlalchemy import case
     vehicles = (
         db.query(Vehicle)
-        .order_by(Vehicle.created_at.desc())
+        .order_by(
+            # Pending listings float to the top, oldest pending first
+            case(
+                (Vehicle.status == VehicleStatus.PENDING, 0),
+                else_=1
+            ),
+            # Within pending: oldest uploaded first (FIFO queue)
+            # Within others: newest first
+            Vehicle.created_at.asc()
+        )
         .offset(offset).limit(per_page).all()
     )
     cache: dict = {}
