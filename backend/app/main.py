@@ -25,6 +25,8 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
+# NOTE: do NOT include "*" here — it conflicts with allow_credentials=True
+# and causes browsers to block requests even when the origin is correct.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -33,7 +35,8 @@ app.add_middleware(
         "https://www.pikcarz.co.za",
         "http://localhost:3000",
         "http://127.0.0.1:5500",
-        "*",
+        "http://localhost:5500",
+        "http://localhost:8080",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -59,8 +62,6 @@ app.include_router(search_alerts.router)
 
 
 # ── DB table creation + migration: run once at startup via lifespan ───────────
-# Using @app.on_event rather than module-level code so errors are caught and
-# returned as JSON rather than killing the process silently.
 @app.on_event("startup")
 async def startup_db():
     try:
@@ -74,26 +75,29 @@ async def startup_db():
         # Create any missing tables (idempotent)
         Base.metadata.create_all(bind=engine)
 
-        # Safe migration: add contact columns if they don't already exist
+        # Safe migrations: add columns if they don't already exist
+        migrations = [
+            # vehicles
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_name VARCHAR;",
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_phone VARCHAR;",
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS views INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS whatsapp_leads INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS email_leads INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS report_url TEXT;",
+            # users
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS dealer_address TEXT;",
+        ]
+
         with engine.connect() as conn:
-            conn.execute(text(
-                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_name VARCHAR;"
-            ))
-            conn.execute(text(
-                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS contact_phone VARCHAR;"
-            ))
-            conn.execute(text(
-                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS views INTEGER NOT NULL DEFAULT 0;"
-            ))
-            conn.execute(text(
-                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS whatsapp_leads INTEGER NOT NULL DEFAULT 0;"
-            ))
-            conn.execute(text(
-                "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS email_leads INTEGER NOT NULL DEFAULT 0;"
-            ))
+            for sql in migrations:
+                try:
+                    conn.execute(text(sql))
+                except Exception as col_err:
+                    print(f"[startup] Migration skipped ({col_err}): {sql}")
             conn.commit()
+
     except Exception as e:
-        # Log but don't crash — tables likely already exist
         print(f"[startup] DB migration note: {e}")
 
 
