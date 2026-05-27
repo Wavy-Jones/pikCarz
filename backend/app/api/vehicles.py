@@ -175,6 +175,9 @@ def list_vehicles(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     province: Optional[str] = None,
+    transmission: Optional[str] = None,
+    fuel_type: Optional[str] = None,
+    keyword: Optional[str] = None,
     status: str = "active",
     db: Session = Depends(get_db)
 ):
@@ -197,6 +200,22 @@ def list_vehicles(
         query = query.filter(Vehicle.price <= max_price)
     if province:
         query = query.filter(Vehicle.province.ilike(f"%{province}%"))
+    if transmission:
+        query = query.filter(Vehicle.transmission.ilike(f"%{transmission}%"))
+    if fuel_type:
+        query = query.filter(Vehicle.fuel_type.ilike(f"%{fuel_type}%"))
+    if keyword:
+        from sqlalchemy import or_
+        kw = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                Vehicle.make.ilike(kw),
+                Vehicle.model.ilike(kw),
+                Vehicle.title.ilike(kw),
+                Vehicle.description.ilike(kw),
+                Vehicle.color.ilike(kw),
+            )
+        )
 
     total = query.count()
     offset = (page - 1) * per_page
