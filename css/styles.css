@@ -201,7 +201,14 @@ h3 { font-size: 1.5rem; }
 .vehicle-card:hover { transform: translateY(-4px); border-color: rgba(255,69,69,0.35); box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
 
 .card-img { position: relative; aspect-ratio: 16/10; overflow: hidden; background: #1e2026; }
-.card-img img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease; }
+.card-img-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  filter: blur(14px) brightness(0.5);
+  transform: scale(1.12); /* prevents blur edge bleed */
+  z-index: 0;
+}
+.card-img img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease; }
 .vehicle-card:hover .card-img img { transform: scale(1.04); }
 
 .card-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
