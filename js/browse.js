@@ -410,10 +410,9 @@ function createVehicleCard(vehicle) {
 
   return `
     <article class="vehicle-card" onclick="window.location='vehicle-detail.html?id=${vehicle.id}'" style="cursor:pointer">
-      <div class="card-img">
-        <div class="card-img-bg" style="background-image:url('${imageUrl}')"></div>
+      <div class="card-img" style="background-image:url('${imageUrl}')">
         <img src="${imageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" loading="lazy"
-             onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80';this.previousElementSibling.style.backgroundImage=\"url('https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80')\""/>
+             onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80';this.parentElement.style.backgroundImage=\"url('https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80')\""/>
         <span class="card-badge ${badge.cls}">${badge.label}</span>
         ${verifiedBadge}
         <button class="card-save" onclick="event.stopPropagation();toggleSave(this,${vehicle.id})" title="${_savedIds.has(vehicle.id) ? 'Unsave' : 'Save'}">

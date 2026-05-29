@@ -284,9 +284,8 @@ window.toggleSave = function(btn) {
       const initials = seller.substring(0, 2).toUpperCase();
       return `
         <article class="vehicle-card scroll-fade" onclick="window.location='vehicle-detail.html?id=${v.id}'" style="cursor:pointer">
-          <div class="card-img">
-            <div class="card-img-bg" style="background-image:url('${img}')"></div>
-            <img src="${img}" alt="${v.year} ${v.make} ${v.model}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80';this.previousElementSibling.style.backgroundImage=\"url('https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80')\""/>
+          <div class="card-img" style="background-image:url('${img}')">
+            <img src="${img}" alt="${v.year} ${v.make} ${v.model}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80';this.parentElement.style.backgroundImage=\"url('https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80')\""/>
             <span class="card-badge ${badge}">${badgeLabel}</span>
             <button class="card-save" onclick="event.stopPropagation(); toggleSave(this)" aria-label="Save">
               <svg viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
