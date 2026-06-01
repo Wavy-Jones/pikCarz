@@ -12,10 +12,12 @@ from app.models.vehicle import Vehicle
 from app.models.payment import Payment
 from app.models.favourite import Favourite
 from app.models.search_alert import SearchAlert
+from app.models.page_view import PageView
 
 # ── Import routers ────────────────────────────────────────────────────────────
 from app.api import auth, vehicles, admin, subscriptions
 from app.api import favourites, search_alerts
+from app.api import analytics
 
 # ── Initialize app first (before DB ops, so startup errors return JSON) ───────
 app = FastAPI(
@@ -59,6 +61,7 @@ app.include_router(admin.router)
 app.include_router(subscriptions.router)
 app.include_router(favourites.router)
 app.include_router(search_alerts.router)
+app.include_router(analytics.router)
 
 
 # ── DB table creation + migration: run once at startup via lifespan ───────────

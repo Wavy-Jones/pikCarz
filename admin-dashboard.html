@@ -92,6 +92,45 @@
   </div>
 
   <!-- ── Platform Stats ─────────────────────── -->
+  <!-- Analytics section inserted above platform stats -->
+  <div class="admin-section" id="analytics-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>📊 Site Analytics</h2>
+      <button onclick="loadAnalytics()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px">
+      <div class="stat-card"><h3>Page Views Today</h3><div class="value" id="an-views-today">—</div></div>
+      <div class="stat-card"><h3>Visits Today</h3><div class="value" id="an-visits-today">—</div></div>
+      <div class="stat-card"><h3>Views This Week</h3><div class="value" id="an-views-week">—</div></div>
+      <div class="stat-card"><h3>Views This Month</h3><div class="value" id="an-views-month">—</div></div>
+      <div class="stat-card"><h3>Visits This Month</h3><div class="value" id="an-visits-month">—</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+      <div>
+        <h3 style="color:var(--white);font-size:1rem;margin-bottom:14px">📄 Top Pages <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(last 30 days)</span></h3>
+        <div id="an-top-pages"><p style="color:var(--muted);font-size:0.88rem">Loading…</p></div>
+      </div>
+      <div>
+        <h3 style="color:var(--white);font-size:1rem;margin-bottom:14px">📡 Traffic Sources <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(last 30 days)</span></h3>
+        <div id="an-sources"><p style="color:var(--muted);font-size:0.88rem">Loading…</p></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+      <div>
+        <h3 style="color:var(--white);font-size:1rem;margin-bottom:14px">📱 Devices <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(last 30 days)</span></h3>
+        <div id="an-devices"><p style="color:var(--muted);font-size:0.88rem">Loading…</p></div>
+      </div>
+      <div>
+        <h3 style="color:var(--white);font-size:1rem;margin-bottom:14px">⏰ Traffic by Hour <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(today, SAST)</span></h3>
+        <div id="an-hourly"><p style="color:var(--muted);font-size:0.88rem">Loading…</p></div>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--white);font-size:1rem;margin-bottom:14px">📈 14-Day Trend</h3>
+      <div id="an-daily" style="overflow-x:auto"><p style="color:var(--muted);font-size:0.88rem">Loading…</p></div>
+    </div>
+  </div>
+
   <div class="admin-stats">
     <div class="stat-card"><h3>Total Users</h3><div class="value" id="stat-users">0</div></div>
     <div class="stat-card"><h3>Total Vehicles</h3><div class="value" id="stat-vehicles">0</div></div>
@@ -344,11 +383,62 @@
 
   async function loadDashboard() {
     document.getElementById('admin-name').textContent = userData.full_name || 'Admin';
-    await Promise.allSettled([loadStats(), loadRevenue(), loadPendingVehicles(), loadAllListings(), loadSubscriptions()]);
+    await Promise.allSettled([loadStats(), loadRevenue(), loadPendingVehicles(), loadAllListings(), loadSubscriptions(), loadAnalytics()]);
   }
 
   function authHeaders() {
     return { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` };
+  }
+
+  /* ── Analytics ─────────────────────────────────────────── */
+  async function loadAnalytics() {
+    try {
+      const res = await fetch(`${API_BASE}/api/analytics/dashboard`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const d = await res.json();
+
+      document.getElementById('an-views-today').textContent  = (d.totals.views_today  || 0).toLocaleString('en-ZA');
+      document.getElementById('an-visits-today').textContent = (d.totals.visits_today || 0).toLocaleString('en-ZA');
+      document.getElementById('an-views-week').textContent   = (d.totals.views_week   || 0).toLocaleString('en-ZA');
+      document.getElementById('an-views-month').textContent  = (d.totals.views_month  || 0).toLocaleString('en-ZA');
+      document.getElementById('an-visits-month').textContent = (d.totals.visits_month || 0).toLocaleString('en-ZA');
+
+      // Top pages
+      document.getElementById('an-top-pages').innerHTML = d.top_pages.length
+        ? d.top_pages.map((p,i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.85rem"><span style="color:var(--white)">${i+1}. ${p.title||p.url}</span><span style="color:var(--accent);font-weight:700">${p.views.toLocaleString('en-ZA')}</span></div>`).join('')
+        : '<p style="color:var(--muted);font-size:0.85rem">No data yet.</p>';
+
+      // Sources
+      const srcTotal = d.sources.reduce((s,r)=>s+r.views,0)||1;
+      document.getElementById('an-sources').innerHTML = d.sources.length
+        ? d.sources.map(s => { const pct=Math.round(s.views/srcTotal*100); return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:4px"><span style="color:var(--white)">${s.source}</span><span style="color:var(--muted)">${s.views.toLocaleString('en-ZA')} (${pct}%)</span></div><div style="height:6px;background:var(--border);border-radius:3px"><div style="height:6px;background:var(--accent);border-radius:3px;width:${pct}%"></div></div></div>`; }).join('')
+        : '<p style="color:var(--muted);font-size:0.85rem">No data yet.</p>';
+
+      // Devices
+      const devTotal = d.devices.reduce((s,r)=>s+r.views,0)||1;
+      const devIcons = {mobile:'📱',desktop:'🖥️',tablet:'📲',unknown:'❓'};
+      document.getElementById('an-devices').innerHTML = d.devices.length
+        ? d.devices.map(dv => { const pct=Math.round(dv.views/devTotal*100); return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:4px"><span style="color:var(--white)">${devIcons[dv.device]||''} ${dv.device}</span><span style="color:var(--muted)">${dv.views.toLocaleString('en-ZA')} (${pct}%)</span></div><div style="height:6px;background:var(--border);border-radius:3px"><div style="height:6px;background:#3b82f6;border-radius:3px;width:${pct}%"></div></div></div>`; }).join('')
+        : '<p style="color:var(--muted);font-size:0.85rem">No data yet.</p>';
+
+      // Hourly bar chart
+      if (d.hourly.length) {
+        const maxH = Math.max(...d.hourly.map(h=>h.views),1);
+        const bars = Array.from({length:24},(_,h)=>{ const entry=d.hourly.find(x=>x.hour===h); const v=entry?entry.views:0; const pct=Math.round(v/maxH*100); return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:100%;background:var(--accent);border-radius:2px 2px 0 0;height:${Math.max(pct*0.8,v?3:0)}px" title="${h}:00 — ${v} views"></div>${h%6===0?`<span style="font-size:0.58rem;color:var(--muted)">${h}h</span>`:''}</div>`; }).join('');
+        document.getElementById('an-hourly').innerHTML = `<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding-bottom:18px">${bars}</div>`;
+      } else {
+        document.getElementById('an-hourly').innerHTML = '<p style="color:var(--muted);font-size:0.85rem">No traffic today yet.</p>';
+      }
+
+      // 14-day table
+      document.getElementById('an-daily').innerHTML = d.daily.length
+        ? `<table class="sub-table"><thead><tr><th>Date</th><th>Page Views</th><th>Unique Visits</th></tr></thead><tbody>${d.daily.map(r=>`<tr><td>${r.date}</td><td style="color:var(--accent);font-weight:700">${Number(r.views).toLocaleString('en-ZA')}</td><td>${Number(r.visits).toLocaleString('en-ZA')}</td></tr>`).join('')}</tbody></table>`
+        : '<p style="color:var(--muted);font-size:0.85rem">No data yet.</p>';
+
+    } catch (err) {
+      const sec = document.getElementById('analytics-section');
+      if (sec) sec.querySelector('[id^=an-daily]').innerHTML = `<p style="color:#ef4444;font-size:0.88rem">⚠️ Could not load analytics: ${err.message}</p>`;
+    }
   }
 
   /* ── Stats ───────────────────────────────── */
