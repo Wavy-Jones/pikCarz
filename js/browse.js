@@ -408,8 +408,20 @@ function createVehicleCard(vehicle) {
   const sellerName = vehicle.contact_name || vehicle.seller_name || 'Seller';
   const initials   = sellerName.substring(0, 2).toUpperCase();
 
+  // Referral badges
+  const sellerBadges = [
+    vehicle.seller_is_ambassador      ? '<span style="font-size:0.65rem;color:#f59e0b;font-weight:700">🚀 Ambassador</span>'      : '',
+    vehicle.seller_is_founding_dealer ? '<span style="font-size:0.65rem;color:#10b981;font-weight:700">🏅 Founding</span>'        : '',
+    vehicle.seller_priority_active    ? '<span style="font-size:0.65rem;color:#60a5fa;font-weight:700">⚡ Priority</span>'          : '',
+  ].filter(Boolean).join(' ');
+
+  // Priority listing gets a subtle top border highlight
+  const priorityStyle = vehicle.seller_priority_active
+    ? 'border-top: 2px solid #3b82f6;'
+    : '';
+
   return `
-    <article class="vehicle-card" onclick="window.location='vehicle-detail.html?id=${vehicle.id}'" style="cursor:pointer">
+    <article class="vehicle-card" onclick="window.location='vehicle-detail.html?id=${vehicle.id}'" style="cursor:pointer;${priorityStyle}">
       <div class="card-img">
         <img src="${imageUrl}" alt="${vehicle.year} ${vehicle.make} ${vehicle.model}" loading="lazy"
              onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80'"/>
@@ -433,11 +445,14 @@ function createVehicleCard(vehicle) {
         </div>
       </div>
       <div class="card-footer">
-      <div class="card-seller">
-      <div class="seller-av">${initials}</div>
-      <span class="seller-name">${sellerName}</span>
-      </div>
-      <button class="compare-btn" data-id="${vehicle.id}" onclick="event.stopPropagation();toggleCompare(this,{id:${vehicle.id},make:'${vehicle.make.replace(/'/g,"\\'")}',model:'${vehicle.model.replace(/'/g,"\\'")}',year:${vehicle.year},images:${JSON.stringify(vehicle.images||[])},price:${vehicle.price}})" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap">⚖️ Compare</button>
+        <div class="card-seller">
+          <div class="seller-av">${initials}</div>
+          <div>
+            <span class="seller-name">${sellerName}</span>
+            ${sellerBadges ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">${sellerBadges}</div>` : ''}
+          </div>
+        </div>
+        <button class="compare-btn" data-id="${vehicle.id}" onclick="event.stopPropagation();toggleCompare(this,{id:${vehicle.id},make:'${vehicle.make.replace(/'/g,"\\'")}',model:'${vehicle.model.replace(/'/g,"\\'")}',year:${vehicle.year},images:${JSON.stringify(vehicle.images||[])},price:${vehicle.price}})" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap">⚖️ Compare</button>
       </div>
     </article>`;
 }

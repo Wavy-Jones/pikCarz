@@ -12,10 +12,11 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
-    role: str = "individual"  # individual or dealer
+    role: str = "individual"
     business_name: Optional[str] = None
     business_registration: Optional[str] = None
     dealer_address: Optional[str] = None
+    referral_code: Optional[str] = None   # code entered at registration
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -38,6 +39,14 @@ class UserResponse(UserBase):
     is_verified_dealer: bool
     is_active: bool
     created_at: datetime
+
+    # Referral
+    referral_code:          Optional[str]      = None
+    referral_count:         int                = 0
+    is_founding_dealer:     bool               = False
+    is_ambassador:          bool               = False
+    priority_search_until:  Optional[datetime] = None
+    featured_listing_until: Optional[datetime] = None
 
     class Config:
         from_attributes = True

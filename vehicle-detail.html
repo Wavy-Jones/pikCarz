@@ -671,6 +671,7 @@
               <p id="seller-type">Private Seller</p>
             </div>
           </div>
+          <div id="seller-badges" style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0"></div>
 
           <div class="contact-buttons">
             <!-- WhatsApp is the primary contact method -->
@@ -1004,6 +1005,19 @@ function displayVehicle(vehicle) {
   if (vehicle.report_url && reportBtn) {
     reportBtn.href = vehicle.report_url;
     reportBtn.style.display = 'flex';
+  }
+
+  // Referral badges on seller card
+  const badgeContainer = document.getElementById('seller-badges');
+  if (badgeContainer) {
+    const badges = [];
+    if (vehicle.seller_is_ambassador)
+      badges.push('<span style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:3px 10px;border-radius:100px;font-size:0.72rem;font-weight:700">🚀 Ambassador</span>');
+    if (vehicle.seller_is_founding_dealer)
+      badges.push('<span style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid #10b981;padding:3px 10px;border-radius:100px;font-size:0.72rem;font-weight:700">🏅 Founding Dealer</span>');
+    if (vehicle.seller_priority_active)
+      badges.push('<span style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid #3b82f6;padding:3px 10px;border-radius:100px;font-size:0.72rem;font-weight:700">⚡ Priority Seller</span>');
+    badgeContainer.innerHTML = badges.join(' ');
   }
 }
 

@@ -17,7 +17,7 @@ from app.models.page_view import PageView
 # ── Import routers ────────────────────────────────────────────────────────────
 from app.api import auth, vehicles, admin, subscriptions
 from app.api import favourites, search_alerts
-from app.api import analytics
+from app.api import analytics, referrals
 
 # ── Initialize app first (before DB ops, so startup errors return JSON) ───────
 app = FastAPI(
@@ -62,6 +62,7 @@ app.include_router(subscriptions.router)
 app.include_router(favourites.router)
 app.include_router(search_alerts.router)
 app.include_router(analytics.router)
+app.include_router(referrals.router)
 
 
 # ── DB table creation + migration: run once at startup via lifespan ───────────
@@ -90,6 +91,24 @@ async def startup_db():
             # users
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS dealer_address TEXT;",
+            # referral system
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_count INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founding_dealer BOOLEAN NOT NULL DEFAULT FALSE;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ambassador BOOLEAN NOT NULL DEFAULT FALSE;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS priority_search_until TIMESTAMPTZ;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS featured_listing_until TIMESTAMPTZ;",
+            # backfill referral codes for existing users
+            "UPDATE users SET referral_code = UPPER(SUBSTRING(MD5(id::text || 'pikcarz') FOR 8)) WHERE referral_code IS NULL;",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL;",
+            """CREATE TABLE IF NOT EXISTS referrals (
+                id          SERIAL PRIMARY KEY,
+                referrer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referred_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );""",
+            "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);",
         ]
 
         with engine.connect() as conn:

@@ -12,20 +12,31 @@ from app.schemas.user import UserCreate, UserLogin, UserResponse, UserUpdate, To
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.deps import get_current_user
 from app.services.email import send_password_reset_email, send_welcome_email
+from app.models.referral import Referral
 import secrets
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user (individual or dealer)"""
+def register(user_data: UserCreate, ref: str = None, db: Session = Depends(get_db)):
+    """Register a new user. Accepts optional ?ref=CODE in URL or referral_code in body."""
     
     # Check if user exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Resolve referral code: URL param takes priority, then body field
+    incoming_ref = (ref or user_data.referral_code or "").strip().upper() or None
+    
     # Create user
+    # Generate a unique referral code for this new user
+    from app.api.referrals import _generate_code
+    while True:
+        new_code = _generate_code()
+        if not db.query(User).filter(User.referral_code == new_code).first():
+            break
+
     new_user = User(
         email=user_data.email,
         hashed_password=get_password_hash(user_data.password),
@@ -35,11 +46,27 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         business_name=user_data.business_name,
         business_registration=user_data.business_registration,
         dealer_address=user_data.dealer_address,
+        referral_code=new_code,
     )
-    
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Handle incoming referral code — credit the referrer
+    if incoming_ref:
+        referrer = db.query(User).filter(
+            User.referral_code == incoming_ref
+        ).first()
+        if referrer and referrer.id != new_user.id:
+            # Record the referral
+            referral = Referral(referrer_id=referrer.id, referred_id=new_user.id)
+            db.add(referral)
+            referrer.referral_count = (referrer.referral_count or 0) + 1
+            db.commit()
+            # Apply milestones (badges)
+            from app.api.referrals import _apply_milestones
+            _apply_milestones(referrer, db)
     
     # Send welcome email (non-blocking, don't fail registration if email fails)
     try:

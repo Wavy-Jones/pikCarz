@@ -65,6 +65,11 @@ class VehicleResponse(VehicleBase):
     contact_name:  Optional[str] = None
     contact_phone: Optional[str] = None
 
+    # Seller referral badges
+    seller_is_founding_dealer: Optional[bool] = None
+    seller_is_ambassador:      Optional[bool] = None
+    seller_priority_active:    Optional[bool] = None   # True = priority search active
+
     # Engagement
     views:          int = 0
     whatsapp_leads: int = 0

@@ -30,17 +30,21 @@ def _seller_name(vehicle, owner) -> str:
 
 
 def _vehicle_response(vehicle, owner) -> VehicleResponse:
+    now  = _now_aware()
     resp = VehicleResponse.model_validate(vehicle)
     resp.seller_name   = _seller_name(vehicle, owner)
     resp.seller_type   = owner.role if owner else "individual"
     resp.is_verified   = bool(owner.is_verified_dealer) if owner and owner.role == "dealer" else False
     resp.contact_name  = vehicle.contact_name or None
     resp.contact_phone = vehicle.contact_phone or None
-    # Resolve the best available phone: admin-set contact_phone takes priority,
-    # then fall back to the owner's profile phone
     resp.seller_phone  = vehicle.contact_phone or (owner.phone if owner else None) or None
-    # Expose the owner's email so admin can reach them directly
     resp.seller_email  = owner.email if owner else None
+    # Referral badges
+    resp.seller_is_founding_dealer = bool(owner.is_founding_dealer) if owner else False
+    resp.seller_is_ambassador      = bool(owner.is_ambassador)      if owner else False
+    resp.seller_priority_active    = bool(
+        owner and owner.priority_search_until and owner.priority_search_until > now
+    )
     return resp
 
 

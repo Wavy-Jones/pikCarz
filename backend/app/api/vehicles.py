@@ -34,13 +34,23 @@ def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
 
 
 def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
-    """Helper: build a VehicleResponse with correct seller + contact info."""
+    """Build a VehicleResponse with correct seller, contact, and badge info."""
+    from datetime import datetime, timezone
+    now  = datetime.now(tz=timezone.utc)
     resp = VehicleResponse.model_validate(vehicle)
     resp.seller_name  = _seller_name(vehicle, owner)
     resp.seller_type  = owner.role if owner else "individual"
     resp.is_verified  = bool(owner.is_verified_dealer) if owner and owner.role == "dealer" else False
     resp.contact_name  = vehicle.contact_name  or None
     resp.contact_phone = vehicle.contact_phone or None
+    resp.seller_phone  = vehicle.contact_phone or (owner.phone if owner else None) or None
+    resp.seller_email  = owner.email if owner else None
+    # Referral badges
+    resp.seller_is_founding_dealer = bool(owner.is_founding_dealer) if owner else False
+    resp.seller_is_ambassador      = bool(owner.is_ambassador)      if owner else False
+    resp.seller_priority_active    = bool(
+        owner and owner.priority_search_until and owner.priority_search_until > now
+    )
     return resp
 
 
@@ -217,11 +227,39 @@ def list_vehicles(
             )
         )
 
-    total = query.count()
+    total  = query.count()
     offset = (page - 1) * per_page
-    vehicles = query.order_by(Vehicle.created_at.desc()).offset(offset).limit(per_page).all()
 
-    vehicle_responses = []
+    # ── Sort: priority sellers first, then newest ──────────────────────────────
+    # JOIN users so we can order by priority_search_until
+    from sqlalchemy import case as sa_case
+    priority_flag = sa_case(
+        (User.priority_search_until > now, 0),
+        else_=1
+    )
+    vehicles = (
+        query
+        .join(User, User.id == Vehicle.owner_id)
+        .order_by(priority_flag, Vehicle.created_at.desc())
+        .offset(offset).limit(per_page)
+        .all()
+    )
+
+    owner_cache = {}
+    def _owner(oid):
+        if oid not in owner_cache:
+            owner_cache[oid] = db.query(User).filter(User.id == oid).first()
+        return owner_cache[oid]
+
+    return VehicleListResponse(
+        total=total, page=page, per_page=per_page,
+        vehicles=[_build_response(v, _owner(v.owner_id)) for v in vehicles],
+    )
+
+
+# ── Get Single Vehicle ─────────────────────────────────────────────────────────────
+
+# ── Bulk CSV Upload
     for vehicle in vehicles:
         owner = db.query(User).filter(User.id == vehicle.owner_id).first()
         vehicle_responses.append(_build_response(vehicle, owner))

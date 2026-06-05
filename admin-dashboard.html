@@ -189,6 +189,14 @@
   <!-- Subscriptions / Users -->
   <div class="admin-section">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>🏆 Referral Leaderboard</h2>
+      <button onclick="loadReferralLeaderboard()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
+    </div>
+    <div id="referral-leaderboard"><p style="color:var(--muted)">Loading…</p></div>
+  </div>
+
+  <div class="admin-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
       <h2>💳 User Subscriptions</h2>
       <button onclick="loadSubscriptions()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
     </div>
@@ -383,11 +391,66 @@
 
   async function loadDashboard() {
     document.getElementById('admin-name').textContent = userData.full_name || 'Admin';
-    await Promise.allSettled([loadStats(), loadRevenue(), loadPendingVehicles(), loadAllListings(), loadSubscriptions(), loadAnalytics()]);
+    await Promise.allSettled([loadStats(), loadRevenue(), loadPendingVehicles(), loadAllListings(), loadSubscriptions(), loadAnalytics(), loadReferralLeaderboard()]);
   }
 
   function authHeaders() {
     return { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` };
+  }
+
+  /* ── Referral Leaderboard ───────────────────────────────────────── */
+  async function loadReferralLeaderboard() {
+    const div = document.getElementById('referral-leaderboard');
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/leaderboard?limit=20`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const users = await res.json();
+      if (!users.length) { div.innerHTML = '<p style="color:var(--muted)">No referrals recorded yet.</p>'; return; }
+      div.innerHTML = `<div style="overflow-x:auto"><table class="sub-table">
+        <thead><tr>
+          <th>#</th><th>User</th><th>Referrals</th><th>Badges</th><th>Priority Search</th><th>Featured Until</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${users.map((u, i) => `
+          <tr>
+            <td style="color:var(--muted)">${i+1}</td>
+            <td><strong style="color:var(--white)">${u.full_name}</strong><br><span style="color:var(--muted);font-size:0.8rem">${u.email}</span></td>
+            <td style="color:var(--accent);font-weight:800;font-size:1.1rem">${u.referral_count}</td>
+            <td style="font-size:0.82rem">
+              ${u.is_founding_dealer ? '<span style="color:#f59e0b">🏅 Founding</span> ' : ''}
+              ${u.is_ambassador      ? '<span style="color:var(--accent)">🚀 Ambassador</span>' : ''}
+              ${!u.is_founding_dealer && !u.is_ambassador ? '<span style="color:var(--muted)">None yet</span>' : ''}
+            </td>
+            <td style="color:${u.priority_search_until ? '#10b981' : 'var(--muted)'}">${u.priority_search_until ? '⬆️ Active until ' + new Date(u.priority_search_until).toLocaleDateString('en-ZA') : '—'}</td>
+            <td style="color:${u.featured_until ? '#10b981' : 'var(--muted)'}">${u.featured_until ? '⭐ Active until ' + new Date(u.featured_until).toLocaleDateString('en-ZA') : '—'}</td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap">
+              ${u.referral_count >= 1 ? `<button onclick="grantPriority(${u.id},'${u.full_name.replace(/'/g,"&#39;")}')" style="background:#3b82f6;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700">⬆️ Priority</button>` : ''}
+              ${u.referral_count >= 5 ? `<button onclick="grantFeatured(${u.id},'${u.full_name.replace(/'/g,"&#39;")}')" style="background:#f59e0b;color:#000;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700">⭐ Feature</button>` : ''}
+            </td>
+          </tr>`).join('')}
+        </tbody></table></div>`;
+    } catch (err) {
+      div.innerHTML = `<p style="color:#ef4444">Could not load leaderboard: ${err.message}</p>`;
+    }
+  }
+
+  async function grantPriority(userId, name) {
+    if (!confirm(`Grant 7-day Priority Search to ${name}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/grant-priority/${userId}?days=7`, { method: 'POST', headers: authHeaders() });
+      const d = await res.json();
+      alert('✅ ' + (d.message || 'Priority search granted!'));
+      loadReferralLeaderboard();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  async function grantFeatured(userId, name) {
+    if (!confirm(`Grant 14-day Featured Homepage Listing to ${name}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/grant-featured/${userId}?days=14`, { method: 'POST', headers: authHeaders() });
+      const d = await res.json();
+      alert('✅ ' + (d.message || 'Featured listing granted!'));
+      loadReferralLeaderboard();
+    } catch (e) { alert('Error: ' + e.message); }
   }
 
   /* ── Analytics ─────────────────────────────────────────── */
@@ -1107,6 +1170,67 @@
   }
   document.getElementById('admin-listing-modal').addEventListener('click', function(e) { if (e.target === this) closeAdminListingModal(); });
   document.getElementById('edit-vehicle-modal').addEventListener('click',  function(e) { if (e.target === this) closeEditModal(); });
+
+  /* ── Referral Leaderboard ─────────────────────────────────────────── */
+  async function loadReferralLeaderboard() {
+    const div = document.getElementById('referral-leaderboard');
+    if (!div) return;
+    div.innerHTML = '<p style="color:var(--muted)">Loading…</p>';
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/leaderboard`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const users = await res.json();
+      if (!users.length) { div.innerHTML = '<p style="color:var(--muted)">No referrals recorded yet.</p>'; return; }
+      div.innerHTML = `<div style="overflow-x:auto"><table class="sub-table">
+        <thead><tr>
+          <th>#</th><th>Name</th><th>Email</th><th>Referrals</th><th>Badges</th>
+          <th>Priority Search</th><th>Featured Listing</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${users.map((u, i) => `<tr>
+          <td>${i + 1}</td>
+          <td style="color:var(--white);font-weight:600">${u.full_name}</td>
+          <td style="color:var(--muted);font-size:0.82rem">${u.email}</td>
+          <td style="color:var(--accent);font-weight:700;text-align:center">${u.referral_count}</td>
+          <td>${[
+            u.is_ambassador      ? '🌟 Ambassador'      : '',
+            u.is_founding_dealer ? '🏅 Founding Dealer' : '',
+          ].filter(Boolean).join(' ') || '<span style="color:var(--muted)">None</span>'}</td>
+          <td style="font-size:0.82rem">${u.priority_search_active
+            ? `<span style="color:#10b981">✓ Active until ${u.priority_search_until?.slice(0,10)}</span>`
+            : '<span style="color:var(--muted)">Inactive</span>'}</td>
+          <td style="font-size:0.82rem">${u.featured_listing_active
+            ? `<span style="color:#10b981">✓ Active until ${u.featured_listing_until?.slice(0,10)}</span>`
+            : '<span style="color:var(--muted)">Inactive</span>'}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="adminGrantPriority(${u.id})" style="background:var(--accent);color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">⚡ +7d Priority</button>
+            <button onclick="adminGrantFeatured(${u.id})" style="background:#10b981;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">🏠 +14d Featured</button>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    } catch (err) {
+      div.innerHTML = `<p style="color:#ef4444">Could not load leaderboard: ${err.message}</p>`;
+    }
+  }
+
+  async function adminGrantPriority(userId) {
+    if (!confirm('Grant this user 7 days of priority search placement?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/grant-priority/${userId}`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      alert('✅ ' + data.message);
+      loadReferralLeaderboard();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  async function adminGrantFeatured(userId) {
+    if (!confirm('Grant this user 14 days of featured homepage listing?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/grant-featured/${userId}`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      alert('✅ ' + data.message);
+      loadReferralLeaderboard();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
 </script>
 
 </body>
