@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.referral import Referral
 from app.core.deps import get_current_user, get_current_admin
+import secrets
 
 router = APIRouter(prefix="/api/referrals", tags=["Referrals"])
 
