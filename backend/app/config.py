@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     # Cron job secret for renewal reminders
     CRON_SECRET: str = "pikcarz-cron-2026"
 
+    # WhatsApp Cloud API — optional; WhatsApp reminders will log-only if unset
+    WHATSAPP_API_TOKEN: Optional[str] = None
+    WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
+
     # Admin
     ADMIN_EMAIL: str = "admin@pikcarz.co.za"
     ADMIN_PASSWORD: Optional[str] = None

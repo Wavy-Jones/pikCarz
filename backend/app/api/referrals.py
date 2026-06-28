@@ -151,3 +151,33 @@ def grant_featured_listing(
     user.featured_listing_until = base + timedelta(days=14)
     db.commit()
     return {"message": f"Featured listing granted until {user.featured_listing_until.date()}", "until": user.featured_listing_until}
+
+
+@router.post("/admin/revoke-priority/{user_id}")
+def revoke_priority_search(
+    user_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Cancel/stop an active priority search placement immediately."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    user.priority_search_until = None
+    db.commit()
+    return {"message": f"Priority search placement cancelled for {user.full_name}"}
+
+
+@router.post("/admin/revoke-featured/{user_id}")
+def revoke_featured_listing(
+    user_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Cancel/stop an active featured homepage listing immediately."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    user.featured_listing_until = None
+    db.commit()
+    return {"message": f"Featured listing cancelled for {user.full_name}"}

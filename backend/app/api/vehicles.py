@@ -338,6 +338,69 @@ def track_lead(vehicle_id: int, lead_type: str = Query(..., regex="^(whatsapp|em
     return {"ok": True}
 
 
+@router.post("/{vehicle_id}/mark-sold", response_model=VehicleResponse)
+def mark_vehicle_sold(
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Mark a vehicle as sold. Shows a 'Sold' ribbon on the listing for 7 days,
+    then it's automatically removed from the seller's dashboard so the same
+    car can't accidentally be re-listed or sold twice. A permanent stats
+    record is kept (sold_vehicles table) even after the listing is removed.
+    """
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    if vehicle.owner_id != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if vehicle.status == VehicleStatus.SOLD:
+        raise HTTPException(status_code=400, detail="This vehicle is already marked as sold")
+
+    vehicle.status = VehicleStatus.SOLD
+    vehicle.sold_at = datetime.utcnow()
+
+    # Durable stats record — survives even after the listing itself is
+    # auto-removed 7 days from now.
+    from sqlalchemy import text as _text
+    db.execute(
+        _text(
+            "INSERT INTO sold_vehicles (vehicle_id, owner_id, make, model, year, price, sold_at) "
+            "VALUES (:vid, :oid, :make, :model, :year, :price, :sold_at)"
+        ),
+        {
+            "vid": vehicle.id, "oid": vehicle.owner_id, "make": vehicle.make,
+            "model": vehicle.model, "year": vehicle.year, "price": float(vehicle.price),
+            "sold_at": vehicle.sold_at,
+        },
+    )
+    db.commit()
+    db.refresh(vehicle)
+    return _build_response(vehicle, current_user)
+
+
+@router.post("/{vehicle_id}/unmark-sold", response_model=VehicleResponse)
+def unmark_vehicle_sold(
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Undo an accidental 'Mark as Sold' — restores the listing to Active."""
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    if vehicle.owner_id != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if vehicle.status != VehicleStatus.SOLD:
+        raise HTTPException(status_code=400, detail="This vehicle is not marked as sold")
+    vehicle.status = VehicleStatus.ACTIVE
+    vehicle.sold_at = None
+    db.commit()
+    db.refresh(vehicle)
+    return _build_response(vehicle, current_user)
+
+
 @router.put("/{vehicle_id}", response_model=VehicleResponse)
 def update_vehicle(
     vehicle_id: int,

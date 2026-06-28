@@ -6,6 +6,50 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, To, Content
 from typing import Optional
 
+def send_email(to: str, subject: str, body: str) -> bool:
+    """
+    Generic plain-text email sender used by admin notifications,
+    search-alert matches, and subscription renewal reminders.
+
+    Args:
+        to: Recipient email address
+        subject: Email subject line
+        body: Plain-text email body
+
+    Returns:
+        True if sent successfully (or logged in dev fallback), False on failure.
+    """
+    sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
+    from_email = os.environ.get('EMAIL_FROM', 'noreply@pikcarz.co.za')
+
+    if not sendgrid_api_key:
+        print(f"\n{'='*60}")
+        print(f"⚠️  SENDGRID NOT CONFIGURED - EMAIL NOT SENT")
+        print(f"{'='*60}")
+        print(f"To: {to}")
+        print(f"Subject: {subject}")
+        print(f"Body:\n{body}")
+        print(f"{'='*60}\n")
+        return False
+
+    try:
+        html_body = body.replace('\n', '<br>')
+        message = Mail(
+            from_email=Email(from_email, "pikCarz"),
+            to_emails=To(to),
+            subject=subject,
+            plain_text_content=Content("text/plain", body),
+            html_content=Content("text/html", f"<div style='font-family:sans-serif;color:#222;line-height:1.6'>{html_body}</div>"),
+        )
+        sg = SendGridAPIClient(sendgrid_api_key)
+        response = sg.send(message)
+        print(f"✅ Email sent to {to} (status {response.status_code})")
+        return True
+    except Exception as e:
+        print(f"❌ FAILED TO SEND EMAIL to {to}: {str(e)}")
+        return False
+
+
 def send_password_reset_email(to_email: str, reset_link: str, user_name: str) -> bool:
     """
     Send password reset email via SendGrid

@@ -120,7 +120,9 @@
       <!-- Contact Form -->
       <div id="contact-form" class="contact-form fade-in delay-2">
         <h3 style="margin-bottom:24px">Send Us a Message</h3>
-        <form onsubmit="return false">
+        <div id="contact-form-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
+        <div id="contact-form-success" style="display:none;background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:0.88rem"></div>
+        <form id="contact-form-el" onsubmit="handleContactSubmit(event)">
           <div class="form-row">
             <div class="form-group">
               <label for="first-name">First Name</label>
@@ -159,7 +161,7 @@
             <label for="message">Message</label>
             <textarea id="message" placeholder="Tell us more about your enquiry…" required></textarea>
           </div>
-          <button type="submit" class="form-submit">Send Message</button>
+          <button type="submit" id="contact-submit-btn" class="form-submit">Send Message</button>
         </form>
       </div>
 
@@ -225,6 +227,7 @@
 </footer>
 
 <script src="js/auth-state.js"></script>
+<script src="js/api.js"></script>
 <script src="js/main.js"></script>
 <script>
 function dealerEnquiry(e) {
@@ -242,6 +245,43 @@ function dealerEnquiry(e) {
       const firstName = document.getElementById('first-name');
       if (firstName) firstName.focus();
     }, 400);
+  }
+}
+
+async function handleContactSubmit(e) {
+  e.preventDefault();
+  const errDiv = document.getElementById('contact-form-error');
+  const okDiv  = document.getElementById('contact-form-success');
+  const btn    = document.getElementById('contact-submit-btn');
+  errDiv.style.display = 'none';
+  okDiv.style.display  = 'none';
+
+  const payload = {
+    first_name: document.getElementById('first-name').value.trim(),
+    last_name:  document.getElementById('last-name').value.trim(),
+    email:      document.getElementById('email').value.trim(),
+    phone:      document.getElementById('phone').value.trim() || null,
+    user_type:  document.getElementById('user-type').value || null,
+    subject:    document.getElementById('subject').value.trim(),
+    message:    document.getElementById('message').value.trim(),
+  };
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res = await api.post('/api/contact', payload);
+    okDiv.textContent = res.message || "Thanks! Your message has been sent — we'll be in touch shortly.";
+    okDiv.style.display = 'block';
+    document.getElementById('contact-form-el').reset();
+    okDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    errDiv.textContent = err.message || "Something went wrong sending your message. Please try again or email support@pikcarz.co.za directly.";
+    errDiv.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 }
 </script>

@@ -17,7 +17,7 @@ from app.models.page_view import PageView
 # ── Import routers ────────────────────────────────────────────────────────────
 from app.api import auth, vehicles, admin, subscriptions
 from app.api import favourites, search_alerts
-from app.api import analytics, referrals
+from app.api import analytics, referrals, contact
 
 # ── Initialize app first (before DB ops, so startup errors return JSON) ───────
 app = FastAPI(
@@ -63,6 +63,7 @@ app.include_router(favourites.router)
 app.include_router(search_alerts.router)
 app.include_router(analytics.router)
 app.include_router(referrals.router)
+app.include_router(contact.router)
 
 
 # ── DB table creation + migration: run once at startup via lifespan ───────────
@@ -109,6 +110,22 @@ async def startup_db():
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );""",
             "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);",
+            # recurring billing (PayFast subscription token)
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS payfast_token VARCHAR;",
+            "CREATE INDEX IF NOT EXISTS idx_users_payfast_token ON users (payfast_token);",
+            # sold vehicles — "Mark as Sold" feature
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS sold_at TIMESTAMPTZ;",
+            """CREATE TABLE IF NOT EXISTS sold_vehicles (
+                id         SERIAL PRIMARY KEY,
+                vehicle_id INTEGER NOT NULL,
+                owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+                make       VARCHAR NOT NULL,
+                model      VARCHAR NOT NULL,
+                year       INTEGER,
+                price      NUMERIC(12,2),
+                sold_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );""",
+            "CREATE INDEX IF NOT EXISTS idx_sold_vehicles_sold_at ON sold_vehicles(sold_at);",
         ]
 
         with engine.connect() as conn:

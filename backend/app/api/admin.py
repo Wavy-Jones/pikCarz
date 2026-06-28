@@ -11,7 +11,7 @@ from app.models.vehicle import Vehicle
 from app.models import VehicleStatus, UserRole, PaymentStatus
 from app.schemas.vehicle import VehicleResponse, VehicleListResponse, VehicleUpdate
 from app.core.deps import get_current_admin
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -69,6 +69,10 @@ def get_admin_stats(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
+    total_sold = db.execute(text("SELECT COUNT(*) FROM sold_vehicles")).scalar() or 0
+    sold_this_month = db.execute(
+        text("SELECT COUNT(*) FROM sold_vehicles WHERE sold_at >= DATE_TRUNC('month', NOW())")
+    ).scalar() or 0
     return {
         "total_users":      db.query(User).count(),
         "total_vehicles":   db.query(Vehicle).count(),
@@ -78,7 +82,34 @@ def get_admin_stats(
         "verified_dealers": db.query(User).filter(
             User.role == UserRole.DEALER, User.is_verified_dealer == True
         ).count(),
+        "total_sold":       int(total_sold),
+        "sold_this_month":  int(sold_this_month),
     }
+
+
+@router.post("/cleanup-sold-listings")
+@router.get("/cleanup-sold-listings")
+def cleanup_sold_listings(secret: str, db: Session = Depends(get_db)):
+    """
+    Called by a daily cron job. Permanently removes any vehicle listing that
+    has been marked Sold for 7+ days — the sold_vehicles stats record stays
+    forever, but the listing itself disappears from the seller's dashboard
+    so the same car can't be re-listed or marked sold twice.
+    """
+    from app.config import settings
+    if secret != settings.CRON_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    cutoff = _now_aware() - timedelta(days=7)
+    expired_sold = db.query(Vehicle).filter(
+        Vehicle.status == VehicleStatus.SOLD,
+        Vehicle.sold_at.isnot(None),
+        Vehicle.sold_at < cutoff,
+    ).all()
+    count = len(expired_sold)
+    for v in expired_sold:
+        db.delete(v)
+    db.commit()
+    return {"removed": count}
 
 
 @router.get("/revenue")
@@ -145,7 +176,7 @@ def admin_get_subscriptions(
         user_rows = db.execute(
             text(
                 "SELECT id, full_name, email, role::text, "
-                "       subscription_tier::text, subscription_expires "
+                "       subscription_tier::text, subscription_expires, is_verified_dealer "
                 "FROM users "
                 "WHERE role::text != 'admin' "
                 "ORDER BY created_at DESC "
@@ -186,7 +217,7 @@ def admin_get_subscriptions(
 
         results = []
         for row in user_rows:
-            uid, full_name, email, role, sub_tier, sub_expires = row
+            uid, full_name, email, role, sub_tier, sub_expires, is_verified = row
             is_active = bool(sub_expires and sub_expires > now)
             lp = last_payment.get(uid)
             results.append({
@@ -200,6 +231,7 @@ def admin_get_subscriptions(
                 "last_payment_amount":  lp["amount"] if lp else None,
                 "last_payment_date":    lp["date"].isoformat() if lp else None,
                 "vehicle_count":        vcount.get(uid, 0),
+                "is_verified_dealer":   bool(is_verified),
             })
 
         return {"total": total, "page": page, "per_page": per_page, "users": results}
@@ -218,15 +250,32 @@ def admin_get_subscriptions(
 def admin_list_all_vehicles(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
+    search: str = Query(None, description="Search by seller name, vehicle make, or model"),
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     _purge_expired_admin_listings(db)
-    total  = db.query(func.count(Vehicle.id)).scalar() or 0
+    from sqlalchemy import case, or_
+
+    base_query = db.query(Vehicle)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        base_query = base_query.outerjoin(User, Vehicle.owner_id == User.id).filter(
+            or_(
+                Vehicle.make.ilike(term),
+                Vehicle.model.ilike(term),
+                Vehicle.title.ilike(term),
+                Vehicle.contact_name.ilike(term),
+                User.full_name.ilike(term),
+                User.business_name.ilike(term),
+                User.email.ilike(term),
+            )
+        )
+
+    total  = base_query.with_entities(func.count(Vehicle.id)).scalar() or 0
     offset = (page - 1) * per_page
-    from sqlalchemy import case
     vehicles = (
-        db.query(Vehicle)
+        base_query
         .order_by(
             # Pending listings float to the top, oldest pending first
             case(
@@ -254,12 +303,27 @@ def admin_list_all_vehicles(
 def get_pending_vehicles(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    search: str = Query(None, description="Search by seller name, vehicle make, or model"),
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     _purge_expired_admin_listings(db)
-    query  = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.PENDING)
-    total  = query.count()
+    from sqlalchemy import or_
+    query = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.PENDING)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.outerjoin(User, Vehicle.owner_id == User.id).filter(
+            or_(
+                Vehicle.make.ilike(term),
+                Vehicle.model.ilike(term),
+                Vehicle.title.ilike(term),
+                Vehicle.contact_name.ilike(term),
+                User.full_name.ilike(term),
+                User.business_name.ilike(term),
+                User.email.ilike(term),
+            )
+        )
+    total  = query.with_entities(func.count(Vehicle.id)).scalar() or 0
     offset = (page - 1) * per_page
     vehicles = query.order_by(Vehicle.created_at.desc()).offset(offset).limit(per_page).all()
     cache: dict = {}
@@ -355,3 +419,97 @@ def admin_delete_user(user_id: int, current_admin: User = Depends(get_current_ad
     db.delete(user)
     db.commit()
     return {"message": f"User {user.email} deleted"}
+
+
+@router.put("/users/{user_id}/verify-dealer")
+def admin_toggle_verified_dealer(
+    user_id: int,
+    verified: bool = Query(..., description="True to verify, False to revoke verification"),
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Manually verify (or revoke verification for) a dealer account.
+    This is what actually sets `is_verified_dealer`, which drives the
+    'Verified Dealers' stat card and the verified badge shown on listings.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    if user.role != UserRole.DEALER:
+        raise HTTPException(400, "Only dealer accounts can be verified")
+    user.is_verified_dealer = verified
+    db.commit()
+    db.refresh(user)
+    return {
+        "message": f"{user.business_name or user.full_name} is now {'verified' if verified else 'unverified'}",
+        "user_id": user.id,
+        "is_verified_dealer": user.is_verified_dealer,
+    }
+
+
+@router.post("/broadcast")
+def admin_broadcast_message(
+    subject: str = Query(..., min_length=1, max_length=200),
+    message: str = Query(..., min_length=1, max_length=4000),
+    audience: str = Query("all", description="all | active_subscribers | dealers | free"),
+    channels: str = Query("email,whatsapp", description="Comma-separated: email, whatsapp"),
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Send a single announcement (specials, important notices, downtime, etc.)
+    to many users at once via email and/or WhatsApp — instead of contacting
+    each subscriber one by one.
+
+    audience options:
+      all                 — every non-admin user
+      active_subscribers  — users with a currently active paid subscription
+      dealers              — users with role = dealer
+      free                 — users on the free tier (e.g. to upsell)
+    """
+    from app.services.email import send_email
+    from app.services.whatsapp import send_whatsapp_message
+
+    now = _now_aware()
+    query = db.query(User).filter(User.role != UserRole.ADMIN)
+
+    if audience == "active_subscribers":
+        query = query.filter(User.subscription_expires.isnot(None), User.subscription_expires > now)
+    elif audience == "dealers":
+        query = query.filter(User.role == UserRole.DEALER)
+    elif audience == "free":
+        from app.models import SubscriptionTier
+        query = query.filter(User.subscription_tier == SubscriptionTier.FREE)
+    elif audience != "all":
+        raise HTTPException(400, f"Unknown audience '{audience}'")
+
+    users = query.all()
+    chosen_channels = {c.strip().lower() for c in channels.split(",") if c.strip()}
+
+    emails_sent = 0
+    whatsapps_sent = 0
+    skipped_no_phone = 0
+
+    for user in users:
+        if "email" in chosen_channels and user.email:
+            body = f"Hi {user.full_name},\n\n{message}\n\n— The pikCarz Team"
+            if send_email(to=user.email, subject=subject, body=body):
+                emails_sent += 1
+
+        if "whatsapp" in chosen_channels:
+            if user.phone:
+                wa_message = f"*{subject}*\n\n{message}\n\n— pikCarz"
+                if send_whatsapp_message(to_phone=user.phone, message=wa_message):
+                    whatsapps_sent += 1
+            else:
+                skipped_no_phone += 1
+
+    return {
+        "message": f"Broadcast sent to {len(users)} user(s).",
+        "audience": audience,
+        "users_targeted": len(users),
+        "emails_sent": emails_sent,
+        "whatsapps_sent": whatsapps_sent,
+        "skipped_no_phone": skipped_no_phone,
+    }

@@ -172,7 +172,7 @@ async def subscribe_to_plan(
 
     trial_days = plan.get("trial_days", 0)
     if trial_days > 0 and _is_trial_eligible(current_user, db):
-        # Grant the free trial immediately — no PayFast redirect
+        # Grant the free trial immediately — no waiting on PayFast for UX.
         current_user.subscription_tier = SubscriptionTier(tier)
         current_user.subscription_expires = datetime.utcnow() + timedelta(days=trial_days)
         db.commit()
@@ -182,14 +182,53 @@ async def subscribe_to_plan(
             trial_label = "2 months"
         else:
             trial_label = "1 month"
+
+        # Also set up a R0.00 PayFast subscription so the card on file can
+        # be auto-charged the moment the trial ends, with no further action
+        # needed from the user. PayFast officially supports an initial
+        # amount of 0.00 for this exact purpose — the card gets verified via
+        # 3D Secure but nothing is deducted until `billing_date`.
+        card_setup_payment = Payment(
+            user_id=current_user.id,
+            amount=0,
+            subscription_tier=SubscriptionTier(tier),
+            status=PaymentStatus.PENDING,
+        )
+        db.add(card_setup_payment)
+        db.commit()
+        db.refresh(card_setup_payment)
+
+        billing_date = (datetime.utcnow() + timedelta(days=trial_days)).strftime('%Y-%m-%d')
+        payment_info = generate_payment_data(
+            payment_id=card_setup_payment.id,
+            amount=0,
+            item_name=f"{plan['name']} — Card Setup (Free Trial)",
+            user_email=current_user.email,
+            user_name=current_user.full_name,
+            is_recurring=True,
+            billing_date=billing_date,
+            recurring_amount=plan["price"],
+            frequency=3,
+            cycles=0,
+        )
         return {
             "message": f"🎉 Free trial activated! You have {trial_label} of {plan['name']} at no charge.",
             "tier": tier,
             "expires": current_user.subscription_expires,
             "is_trial": True,
+            "requires_card_setup": True,
+            "card_setup_note": (
+                f"Add a card now so your {plan['name']} subscription "
+                f"(R{plan['price']}/month) continues automatically when your free trial ends "
+                f"on {billing_date}. No charge today. You can skip this and pay manually later — "
+                f"we'll email and WhatsApp you reminders before your trial ends either way."
+            ),
+            "payment_url": payment_info["url"],
+            "payment_params": payment_info["params"],
         }
 
     # Returning / previously-trialled subscriber — go through PayFast payment
+    # now, AND set up recurring billing so future months auto-renew too.
     payment = Payment(
         user_id=current_user.id,
         amount=plan["price"],
@@ -200,12 +239,18 @@ async def subscribe_to_plan(
     db.commit()
     db.refresh(payment)
 
+    next_billing_date = (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%d')
     payment_info = generate_payment_data(
         payment_id=payment.id,
         amount=plan["price"],
         item_name=plan["name"],
         user_email=current_user.email,
         user_name=current_user.full_name,
+        is_recurring=True,
+        billing_date=next_billing_date,
+        recurring_amount=plan["price"],
+        frequency=3,
+        cycles=0,
     )
 
     return {
@@ -214,36 +259,81 @@ async def subscribe_to_plan(
         "payment_id": payment.id,
         "amount": plan["price"],
         "tier": tier,
+        "auto_renews": True,
     }
 
 
 @router.post("/webhook/payfast")
 async def payfast_webhook(request: Request, db: Session = Depends(get_db)):
-    """Handle PayFast ITN webhook."""
+    """
+    Handle PayFast ITN webhook — fires for the initial payment/card-setup
+    AND for every subsequent automatic recurring charge PayFast makes.
+    """
     form_data = await request.form()
     data = dict(form_data)
 
     if not verify_payfast_signature(data):
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    payment_id = int(data.get("m_payment_id", 0))
     payment_status = data.get("payment_status")
-    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    token = data.get("token")  # present on first payment + every recurring charge
+    raw_id = data.get("m_payment_id")
+    payment_id = int(raw_id) if raw_id and str(raw_id).isdigit() else None
 
-    if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
+    payment = None
+    if payment_id:
+        payment = db.query(Payment).filter(
+            Payment.id == payment_id, Payment.status == PaymentStatus.PENDING
+        ).first()
 
-    if payment_status == "COMPLETE":
-        payment.status = PaymentStatus.COMPLETED
-        payment.pf_payment_id = data.get("pf_payment_id")
+    if payment:
+        # This is the FIRST transaction for this Payment record — either a
+        # real charge (returning subscriber) or a R0 card-setup (new trial).
         user = db.query(User).filter(User.id == payment.user_id).first()
-        if user:
-            user.subscription_tier = payment.subscription_tier
-            user.subscription_expires = datetime.utcnow() + timedelta(days=30)
-    else:
-        payment.status = PaymentStatus.FAILED
+        if payment_status == "COMPLETE":
+            payment.status = PaymentStatus.COMPLETED
+            payment.pf_payment_id = data.get("pf_payment_id")
+            if user:
+                if token:
+                    user.payfast_token = token
+                if payment.amount and payment.amount > 0:
+                    # Real charge (not a R0 trial card-setup) — activate/extend now
+                    user.subscription_tier = payment.subscription_tier
+                    user.subscription_expires = datetime.utcnow() + timedelta(days=30)
+        else:
+            payment.status = PaymentStatus.FAILED
+        db.commit()
+        return {"status": "ok"}
 
-    db.commit()
+    # No matching pending Payment — this is an AUTOMATIC recurring charge
+    # that PayFast initiated itself (trial ending, or monthly renewal).
+    if token:
+        user = db.query(User).filter(User.payfast_token == token).first()
+        if user:
+            if payment_status == "COMPLETE":
+                amount = float(data.get("amount_gross") or 0)
+                renewal_payment = Payment(
+                    user_id=user.id,
+                    amount=amount,
+                    subscription_tier=user.subscription_tier,
+                    status=PaymentStatus.COMPLETED,
+                    pf_payment_id=data.get("pf_payment_id"),
+                )
+                db.add(renewal_payment)
+                base = (
+                    user.subscription_expires
+                    if (user.subscription_expires and user.subscription_expires.replace(tzinfo=None) > datetime.utcnow())
+                    else datetime.utcnow()
+                )
+                user.subscription_expires = base + timedelta(days=30)
+                db.commit()
+            else:
+                # Recurring charge failed — PayFast automatically retries a few
+                # times before locking the subscription, so we don't need to
+                # act immediately. Renewal reminder emails/WhatsApp still cover
+                # the case where it ultimately fails.
+                pass
+
     return {"status": "ok"}
 
 
@@ -254,15 +344,22 @@ def cancel_subscription(current_user: User = Depends(get_current_user), db: Sess
         raise HTTPException(status_code=400, detail="You are already on the free plan.")
     current_user.subscription_tier   = SubscriptionTier.FREE
     current_user.subscription_expires = None
+    current_user.payfast_token = None
     db.commit()
     return {"cancelled": True, "message": "Your subscription has been cancelled. You are now on the free plan."}
 
 
 @router.post("/send-renewal-reminders")
+@router.get("/send-renewal-reminders")
 def send_renewal_reminders(secret: str, db: Session = Depends(get_db)):
-    """Called by a cron job to send subscription renewal reminder emails."""
+    """
+    Called by a cron job to send subscription renewal reminders via email
+    AND WhatsApp. Registered as a Vercel Cron job in vercel.json (daily) —
+    Vercel Cron sends a GET request, so this route accepts both GET and POST.
+    """
     from app.config import settings
     from app.services.email import send_email
+    from app.services.whatsapp import send_whatsapp_message
     if secret != settings.CRON_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
     now = datetime.utcnow()
@@ -273,25 +370,43 @@ def send_renewal_reminders(secret: str, db: Session = Depends(get_db)):
         User.subscription_expires <= reminder_window,
         User.subscription_tier != SubscriptionTier.FREE,
     ).all()
-    sent = 0
+    emails_sent = 0
+    whatsapps_sent = 0
     for user in users:
         days_left = (user.subscription_expires.replace(tzinfo=None) - now).days
         tier_name = user.subscription_tier.value.replace('_', ' ').title()
-        send_email(
+
+        email_body = (
+            f"Hi {user.full_name},\n\n"
+            f"Your {tier_name} subscription on pikCarz expires in {days_left} day(s).\n\n"
+            f"To keep your listings active and avoid interruption, "
+            f"please renew by visiting:\n"
+            f"https://pikcarz.co.za/dashboard.html\n\n"
+            f"Thank you for being part of pikCarz!\n"
+            f"The pikCarz Team"
+        )
+        if send_email(
             to=user.email,
             subject=f"Your pikCarz {tier_name} subscription expires in {days_left} day(s)",
-            body=(
-                f"Hi {user.full_name},\n\n"
-                f"Your {tier_name} subscription on pikCarz expires in {days_left} day(s).\n\n"
-                f"To keep your listings active and avoid interruption, "
-                f"please renew by visiting:\n"
-                f"https://pikcarz.co.za/dashboard.html\n\n"
-                f"Thank you for being part of pikCarz!\n"
-                f"The pikCarz Team"
+            body=email_body,
+        ):
+            emails_sent += 1
+
+        if user.phone:
+            wa_message = (
+                f"Hi {user.full_name}, your pikCarz {tier_name} subscription expires in "
+                f"{days_left} day(s). Renew now to keep your listings active: "
+                f"https://pikcarz.co.za/dashboard.html"
             )
-        )
-        sent += 1
-    return {"reminders_sent": sent}
+            if send_whatsapp_message(to_phone=user.phone, message=wa_message):
+                whatsapps_sent += 1
+
+    return {
+        "reminders_sent": emails_sent,
+        "emails_sent": emails_sent,
+        "whatsapps_sent": whatsapps_sent,
+        "users_checked": len(users),
+    }
 
 
 @router.get("/my-subscription")

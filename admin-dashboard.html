@@ -137,6 +137,8 @@
     <div class="stat-card"><h3>Active Listings</h3><div class="value" id="stat-active">0</div></div>
     <div class="stat-card"><h3>Pending Approval</h3><div class="value" id="stat-pending">0</div></div>
     <div class="stat-card"><h3>Verified Dealers</h3><div class="value" id="stat-dealers">0</div></div>
+    <div class="stat-card"><h3>Total Sold</h3><div class="value" id="stat-sold">0</div></div>
+    <div class="stat-card"><h3>Sold This Month</h3><div class="value" id="stat-sold-month">0</div></div>
   </div>
 
   <!-- Revenue -->
@@ -155,15 +157,23 @@
 
   <!-- Pending Vehicles -->
   <div class="admin-section">
-    <h2>🚦 Pending Vehicles Awaiting Approval</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <h2>🚦 Pending Vehicles Awaiting Approval</h2>
+    </div>
+    <div style="margin-bottom:16px">
+      <input type="text" id="pending-search" placeholder="🔍 Search by seller name or vehicle make…" oninput="debounceSearch('pending')" style="width:100%;max-width:420px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem">
+    </div>
     <div id="pending-vehicles-list"><p style="color:var(--muted)">Loading pending vehicles…</p></div>
   </div>
 
   <!-- All Listings -->
   <div class="admin-section">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
       <h2>💼 All Listings</h2>
       <button onclick="loadAllListings()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
+    </div>
+    <div style="margin-bottom:16px">
+      <input type="text" id="all-search" placeholder="🔍 Search by seller name or vehicle make…" oninput="debounceSearch('all')" style="width:100%;max-width:420px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem">
     </div>
     <div id="all-listings-list"><p style="color:var(--muted)">Loading all listings…</p></div>
   </div>
@@ -197,10 +207,50 @@
 
   <div class="admin-section">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-      <h2>💳 User Subscriptions</h2>
+      <h2>📢 Broadcast to Users</h2>
+    </div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:18px">Send a special offer or important notice to many users at once via email and WhatsApp — no need to message anyone one by one.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div>
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Audience</label>
+        <select id="bc-audience" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+          <option value="all">All users</option>
+          <option value="active_subscribers">Active subscribers only</option>
+          <option value="dealers">Dealers only</option>
+          <option value="free">Free-tier users only</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Send via</label>
+        <div style="display:flex;gap:18px;padding:11px 0">
+          <label style="display:flex;align-items:center;gap:6px;color:var(--white);font-size:0.9rem;cursor:pointer"><input type="checkbox" id="bc-email" checked style="width:16px;height:16px"> Email</label>
+          <label style="display:flex;align-items:center;gap:6px;color:var(--white);font-size:0.9rem;cursor:pointer"><input type="checkbox" id="bc-whatsapp" checked style="width:16px;height:16px"> WhatsApp</label>
+        </div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Subject *</label>
+      <input type="text" id="bc-subject" maxlength="200" placeholder="e.g. Weekend Special: 50% off Premium listings" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;color:var(--muted);font-size:0.88rem;font-weight:500">Message *</label>
+      <textarea id="bc-message" rows="4" maxlength="4000" placeholder="Write your announcement here…" style="width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.95rem;resize:vertical"></textarea>
+    </div>
+    <div id="bc-result" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px;font-size:0.88rem"></div>
+    <button onclick="adminSendBroadcast()" id="bc-send-btn" class="btn-primary" style="padding:12px 24px">📤 Send Broadcast</button>
+  </div>
+
+  <div class="admin-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <h2 style="cursor:pointer" onclick="toggleSubsCollapse()">💳 User Subscriptions <span id="subs-collapse-arrow" style="font-size:0.8rem;color:var(--muted)">▾</span></h2>
       <button onclick="loadSubscriptions()" class="btn-ghost" style="font-size:0.85rem;padding:8px 14px">🔄 Refresh</button>
     </div>
-    <div id="subscriptions-list"><p style="color:var(--muted)">Loading subscriptions…</p></div>
+    <div id="subs-collapse-body">
+      <div style="margin-bottom:16px">
+        <input type="text" id="sub-search" placeholder="🔍 Search users by name or email…" oninput="filterSubscriptions()" style="width:100%;max-width:420px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem">
+      </div>
+      <div id="subscriptions-list"><p style="color:var(--muted)">Loading subscriptions…</p></div>
+    </div>
   </div>
 
 </div>
@@ -398,59 +448,16 @@
     return { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` };
   }
 
-  /* ── Referral Leaderboard ───────────────────────────────────────── */
-  async function loadReferralLeaderboard() {
-    const div = document.getElementById('referral-leaderboard');
-    try {
-      const res = await fetch(`${API_BASE}/api/referrals/admin/leaderboard?limit=20`, { headers: authHeaders() });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const users = await res.json();
-      if (!users.length) { div.innerHTML = '<p style="color:var(--muted)">No referrals recorded yet.</p>'; return; }
-      div.innerHTML = `<div style="overflow-x:auto"><table class="sub-table">
-        <thead><tr>
-          <th>#</th><th>User</th><th>Referrals</th><th>Badges</th><th>Priority Search</th><th>Featured Until</th><th>Actions</th>
-        </tr></thead>
-        <tbody>${users.map((u, i) => `
-          <tr>
-            <td style="color:var(--muted)">${i+1}</td>
-            <td><strong style="color:var(--white)">${u.full_name}</strong><br><span style="color:var(--muted);font-size:0.8rem">${u.email}</span></td>
-            <td style="color:var(--accent);font-weight:800;font-size:1.1rem">${u.referral_count}</td>
-            <td style="font-size:0.82rem">
-              ${u.is_founding_dealer ? '<span style="color:#f59e0b">🏅 Founding</span> ' : ''}
-              ${u.is_ambassador      ? '<span style="color:var(--accent)">🚀 Ambassador</span>' : ''}
-              ${!u.is_founding_dealer && !u.is_ambassador ? '<span style="color:var(--muted)">None yet</span>' : ''}
-            </td>
-            <td style="color:${u.priority_search_until ? '#10b981' : 'var(--muted)'}">${u.priority_search_until ? '⬆️ Active until ' + new Date(u.priority_search_until).toLocaleDateString('en-ZA') : '—'}</td>
-            <td style="color:${u.featured_until ? '#10b981' : 'var(--muted)'}">${u.featured_until ? '⭐ Active until ' + new Date(u.featured_until).toLocaleDateString('en-ZA') : '—'}</td>
-            <td style="display:flex;gap:6px;flex-wrap:wrap">
-              ${u.referral_count >= 1 ? `<button onclick="grantPriority(${u.id},'${u.full_name.replace(/'/g,"&#39;")}')" style="background:#3b82f6;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700">⬆️ Priority</button>` : ''}
-              ${u.referral_count >= 5 ? `<button onclick="grantFeatured(${u.id},'${u.full_name.replace(/'/g,"&#39;")}')" style="background:#f59e0b;color:#000;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700">⭐ Feature</button>` : ''}
-            </td>
-          </tr>`).join('')}
-        </tbody></table></div>`;
-    } catch (err) {
-      div.innerHTML = `<p style="color:#ef4444">Could not load leaderboard: ${err.message}</p>`;
+  let _pendingSearchTimer = null;
+  let _allSearchTimer = null;
+  function debounceSearch(which) {
+    if (which === 'pending') {
+      clearTimeout(_pendingSearchTimer);
+      _pendingSearchTimer = setTimeout(() => loadPendingVehicles(), 350);
+    } else {
+      clearTimeout(_allSearchTimer);
+      _allSearchTimer = setTimeout(() => loadAllListings(), 350);
     }
-  }
-
-  async function grantPriority(userId, name) {
-    if (!confirm(`Grant 7-day Priority Search to ${name}?`)) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/referrals/admin/grant-priority/${userId}?days=7`, { method: 'POST', headers: authHeaders() });
-      const d = await res.json();
-      alert('✅ ' + (d.message || 'Priority search granted!'));
-      loadReferralLeaderboard();
-    } catch (e) { alert('Error: ' + e.message); }
-  }
-
-  async function grantFeatured(userId, name) {
-    if (!confirm(`Grant 14-day Featured Homepage Listing to ${name}?`)) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/referrals/admin/grant-featured/${userId}?days=14`, { method: 'POST', headers: authHeaders() });
-      const d = await res.json();
-      alert('✅ ' + (d.message || 'Featured listing granted!'));
-      loadReferralLeaderboard();
-    } catch (e) { alert('Error: ' + e.message); }
   }
 
   /* ── Analytics ─────────────────────────────────────────── */
@@ -515,8 +522,10 @@
       document.getElementById('stat-active').textContent   = s.active_vehicles  || 0;
       document.getElementById('stat-pending').textContent  = s.pending_vehicles || 0;
       document.getElementById('stat-dealers').textContent  = s.verified_dealers || 0;
+      document.getElementById('stat-sold').textContent     = s.total_sold       || 0;
+      document.getElementById('stat-sold-month').textContent = s.sold_this_month || 0;
     } catch {
-      ['stat-users','stat-vehicles','stat-active','stat-pending','stat-dealers'].forEach(id => {
+      ['stat-users','stat-vehicles','stat-active','stat-pending','stat-dealers','stat-sold','stat-sold-month'].forEach(id => {
         document.getElementById(id).textContent = '—';
       });
     }
@@ -554,12 +563,17 @@
     const div = document.getElementById('pending-vehicles-list');
     div.innerHTML = '<p style="color:var(--muted)">Loading pending vehicles…</p>';
     try {
-      const res = await fetch(`${API_BASE}/api/admin/vehicles/pending?per_page=50`, { headers: authHeaders() });
+      const searchVal = document.getElementById('pending-search')?.value.trim() || '';
+      const qs = new URLSearchParams({ per_page: '50' });
+      if (searchVal) qs.set('search', searchVal);
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/pending?${qs}`, { headers: authHeaders() });
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
       const vehicles = data.vehicles || [];
       if (!vehicles.length) {
-        div.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg><h3 style="color:var(--white);margin-bottom:8px">All Clear!</h3><p>No vehicles waiting for approval.</p></div>`;
+        div.innerHTML = searchVal
+          ? `<div class="empty-state"><p>No pending listings match "${searchVal}".</p></div>`
+          : `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg><h3 style="color:var(--white);margin-bottom:8px">All Clear!</h3><p>No vehicles waiting for approval.</p></div>`;
         return;
       }
       div.innerHTML = vehicles.map(v => vehicleCard(v, 'pending')).join('');
@@ -573,11 +587,19 @@
     const div = document.getElementById('all-listings-list');
     div.innerHTML = '<p style="color:var(--muted);padding:16px">Loading…</p>';
     try {
-      const res = await fetch(`${API_BASE}/api/admin/vehicles/all?per_page=100`, { headers: authHeaders() });
+      const searchVal = document.getElementById('all-search')?.value.trim() || '';
+      const qs = new URLSearchParams({ per_page: '100' });
+      if (searchVal) qs.set('search', searchVal);
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/all?${qs}`, { headers: authHeaders() });
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
       const vehicles = data.vehicles || [];
-      if (!vehicles.length) { div.innerHTML = '<p style="color:var(--muted);padding:16px">No listings yet.</p>'; return; }
+      if (!vehicles.length) {
+        div.innerHTML = searchVal
+          ? `<p style="color:var(--muted);padding:16px">No listings match "${searchVal}".</p>`
+          : '<p style="color:var(--muted);padding:16px">No listings yet.</p>';
+        return;
+      }
       div.innerHTML = vehicles.map(v => vehicleCard(v, 'all')).join('');
     } catch (err) {
       div.innerHTML = `<p style="color:#ef4444;padding:16px">Could not load listings: ${err.message} <button onclick="loadAllListings()" class="btn-primary" style="margin-left:8px;padding:6px 14px">Retry</button></p>`;
@@ -585,6 +607,26 @@
   }
 
   /* ── Subscriptions ────────────────────────── */
+  let _subscriptionsCache = [];
+
+  function toggleSubsCollapse() {
+    const body  = document.getElementById('subs-collapse-body');
+    const arrow = document.getElementById('subs-collapse-arrow');
+    const collapsed = body.style.display === 'none';
+    body.style.display = collapsed ? 'block' : 'none';
+    arrow.textContent = collapsed ? '▾' : '▸';
+  }
+
+  function filterSubscriptions() {
+    const term = document.getElementById('sub-search').value.trim().toLowerCase();
+    const filtered = term
+      ? _subscriptionsCache.filter(u =>
+          (u.full_name || '').toLowerCase().includes(term) ||
+          (u.email || '').toLowerCase().includes(term))
+      : _subscriptionsCache;
+    renderSubscriptionsTable(filtered, term);
+  }
+
   async function loadSubscriptions() {
     const div = document.getElementById('subscriptions-list');
     div.innerHTML = '<p style="color:var(--muted);padding:16px">Loading subscriptions…</p>';
@@ -596,18 +638,35 @@
         throw new Error(errMsg);
       }
       const data = await res.json();
-      const users = data.users || [];
-      if (!users.length) { div.innerHTML = '<p style="color:var(--muted);padding:16px">No registered users yet.</p>'; return; }
-      div.innerHTML = `<div style="overflow-x:auto"><table class="sub-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Plan</th><th>Status</th><th>Expires</th><th>Listings</th><th>Last Payment</th><th>Action</th></tr></thead><tbody>${users.map(u => {
-        const tier = (u.subscription_tier || 'free').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-        const statusBadge = u.is_active ? `<span class="sub-badge sub-active">Active</span>` : u.subscription_tier === 'free' ? `<span class="sub-badge sub-free">Free</span>` : `<span class="sub-badge sub-expired">Expired</span>`;
-        const expires = u.subscription_expires ? new Date(u.subscription_expires).toLocaleDateString('en-ZA') : '—';
-        const lastPay = u.last_payment_date ? `R${u.last_payment_amount?.toLocaleString('en-ZA')} on ${new Date(u.last_payment_date).toLocaleDateString('en-ZA')}` : '—';
-        return `<tr><td>${u.full_name || '—'}</td><td style="color:var(--muted)">${u.email}</td><td>${u.role || '—'}</td><td>${tier}</td><td>${statusBadge}</td><td style="color:var(--muted);font-size:0.82rem">${expires}</td><td style="text-align:center">${u.vehicle_count ?? 0}</td><td style="color:var(--muted);font-size:0.82rem">${lastPay}</td><td><button onclick="adminDeleteUser(${u.id},'${u.email.replace(/'/g,"&#39;")}')" style="background:#ef4444;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700">Delete</button></td></tr>`;
-      }).join('')}</tbody></table></div>`;
+      _subscriptionsCache = data.users || [];
+      const term = document.getElementById('sub-search')?.value.trim().toLowerCase() || '';
+      const filtered = term
+        ? _subscriptionsCache.filter(u =>
+            (u.full_name || '').toLowerCase().includes(term) ||
+            (u.email || '').toLowerCase().includes(term))
+        : _subscriptionsCache;
+      renderSubscriptionsTable(filtered, term);
     } catch (err) {
       div.innerHTML = `<p style="color:#ef4444;padding:16px">Could not load subscriptions: ${err.message} <button onclick="loadSubscriptions()" class="btn-primary" style="margin-left:8px;padding:6px 14px">Retry</button></p>`;
     }
+  }
+
+  function renderSubscriptionsTable(users, term) {
+    const div = document.getElementById('subscriptions-list');
+    if (!_subscriptionsCache.length) { div.innerHTML = '<p style="color:var(--muted);padding:16px">No registered users yet.</p>'; return; }
+    if (!users.length) { div.innerHTML = `<p style="color:var(--muted);padding:16px">No users match "${term}".</p>`; return; }
+    div.innerHTML = `<div style="overflow-x:auto"><table class="sub-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Plan</th><th>Status</th><th>Expires</th><th>Listings</th><th>Last Payment</th><th>Dealer Verified</th><th>Action</th></tr></thead><tbody>${users.map(u => {
+      const tier = (u.subscription_tier || 'free').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      const statusBadge = u.is_active ? `<span class="sub-badge sub-active">Active</span>` : u.subscription_tier === 'free' ? `<span class="sub-badge sub-free">Free</span>` : `<span class="sub-badge sub-expired">Expired</span>`;
+      const expires = u.subscription_expires ? new Date(u.subscription_expires).toLocaleDateString('en-ZA') : '—';
+      const lastPay = u.last_payment_date ? `R${u.last_payment_amount?.toLocaleString('en-ZA')} on ${new Date(u.last_payment_date).toLocaleDateString('en-ZA')}` : '—';
+      const dealerCell = u.role === 'dealer'
+        ? (u.is_verified_dealer
+            ? `<button onclick="adminToggleVerifiedDealer(${u.id}, false, '${u.full_name.replace(/'/g,"&#39;")}')" style="background:#10b981;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">✅ Verified — click to revoke</button>`
+            : `<button onclick="adminToggleVerifiedDealer(${u.id}, true, '${u.full_name.replace(/'/g,"&#39;")}')" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">⬜ Not verified — click to verify</button>`)
+        : '<span style="color:var(--muted);font-size:0.75rem">N/A</span>';
+      return `<tr><td>${u.full_name || '—'}</td><td style="color:var(--muted)">${u.email}</td><td>${u.role || '—'}</td><td>${tier}</td><td>${statusBadge}</td><td style="color:var(--muted);font-size:0.82rem">${expires}</td><td style="text-align:center">${u.vehicle_count ?? 0}</td><td style="color:var(--muted);font-size:0.82rem">${lastPay}</td><td>${dealerCell}</td><td><button onclick="adminDeleteUser(${u.id},'${u.email.replace(/'/g,"&#39;")}')" style="background:#ef4444;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700">Delete</button></td></tr>`;
+    }).join('')}</tbody></table></div>${term ? `<p style="color:var(--muted);font-size:0.78rem;margin-top:10px">Showing ${users.length} of ${_subscriptionsCache.length} users matching "${term}".</p>` : ''}`;
   }
 
   /* ── Vehicle card builder ─────────────────── */
@@ -748,6 +807,99 @@
       } else {
         alert('Could not delete user: ' + err.message);
       }
+    }
+  }
+
+  /* ── Verify / Unverify Dealer ─────────────────────── */
+  async function adminToggleVerifiedDealer(userId, verify, name) {
+    const verb = verify ? 'verify' : 'revoke verification for';
+    if (!confirm(`Are you sure you want to ${verb} ${name}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/users/${userId}/verify-dealer?verified=${verify}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      alert('✅ ' + (data.message || (verify ? 'Dealer verified!' : 'Dealer verification revoked.')));
+      await Promise.allSettled([loadSubscriptions(), loadStats()]);
+    } catch (err) {
+      alert('Could not update dealer verification: ' + err.message);
+    }
+  }
+
+  /* ── Broadcast to Users ─────────────────────── */
+  async function adminSendBroadcast() {
+    const subjectEl  = document.getElementById('bc-subject');
+    const messageEl   = document.getElementById('bc-message');
+    const audience    = document.getElementById('bc-audience').value;
+    const wantEmail   = document.getElementById('bc-email').checked;
+    const wantWhatsapp = document.getElementById('bc-whatsapp').checked;
+    const resultDiv   = document.getElementById('bc-result');
+    const btn         = document.getElementById('bc-send-btn');
+
+    const subject = subjectEl.value.trim();
+    const message = messageEl.value.trim();
+
+    resultDiv.style.display = 'none';
+
+    if (!subject || !message) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = 'rgba(239,68,68,0.1)';
+      resultDiv.style.border = '1px solid #ef4444';
+      resultDiv.style.color = '#ef4444';
+      resultDiv.textContent = 'Please fill in both the subject and message.';
+      return;
+    }
+    if (!wantEmail && !wantWhatsapp) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = 'rgba(239,68,68,0.1)';
+      resultDiv.style.border = '1px solid #ef4444';
+      resultDiv.style.color = '#ef4444';
+      resultDiv.textContent = 'Select at least one channel (Email or WhatsApp).';
+      return;
+    }
+
+    const audienceLabel = {
+      all: 'ALL users',
+      active_subscribers: 'active subscribers only',
+      dealers: 'dealers only',
+      free: 'free-tier users only',
+    }[audience];
+
+    if (!confirm(`Send this broadcast to ${audienceLabel}?\n\nSubject: ${subject}\n\nThis cannot be undone.`)) return;
+
+    const channels = [wantEmail ? 'email' : null, wantWhatsapp ? 'whatsapp' : null].filter(Boolean).join(',');
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const qs = new URLSearchParams({ subject, message, audience, channels });
+      const res = await fetch(`${API_BASE}/api/admin/broadcast?${qs}`, { method: 'POST', headers: authHeaders() });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = 'rgba(16,185,129,0.1)';
+      resultDiv.style.border = '1px solid #10b981';
+      resultDiv.style.color = '#10b981';
+      resultDiv.textContent = `✅ Sent to ${data.users_targeted} user(s) — ${data.emails_sent} email(s), ${data.whatsapps_sent} WhatsApp message(s)${data.skipped_no_phone ? `, ${data.skipped_no_phone} skipped (no phone on file)` : ''}.`;
+      subjectEl.value = '';
+      messageEl.value = '';
+    } catch (err) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = 'rgba(239,68,68,0.1)';
+      resultDiv.style.border = '1px solid #ef4444';
+      resultDiv.style.color = '#ef4444';
+      resultDiv.textContent = 'Could not send broadcast: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📤 Send Broadcast';
     }
   }
 
@@ -1186,7 +1338,27 @@
           <th>#</th><th>Name</th><th>Email</th><th>Referrals</th><th>Badges</th>
           <th>Priority Search</th><th>Featured Listing</th><th>Actions</th>
         </tr></thead>
-        <tbody>${users.map((u, i) => `<tr>
+        <tbody>${users.map((u, i) => {
+          // Qualification thresholds: 1 referral → Priority Search eligible, 5 referrals → Featured eligible
+          const qualifiesForPriority = u.referral_count >= 1;
+          const qualifiesForFeatured = u.referral_count >= 5;
+          let priorityAction;
+          if (u.priority_search_active) {
+            priorityAction = `<button onclick="adminCancelPriority(${u.id})" style="background:#ef4444;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">✕ Cancel Priority</button>`;
+          } else if (qualifiesForPriority) {
+            priorityAction = `<button onclick="adminGrantPriority(${u.id})" style="background:var(--accent);color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">⚡ Grant +7d Priority</button>`;
+          } else {
+            priorityAction = `<span style="color:var(--muted);font-size:0.75rem">Needs 1 referral</span>`;
+          }
+          let featuredAction;
+          if (u.featured_listing_active) {
+            featuredAction = `<button onclick="adminCancelFeatured(${u.id})" style="background:#ef4444;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">✕ Cancel Featured</button>`;
+          } else if (qualifiesForFeatured) {
+            featuredAction = `<button onclick="adminGrantFeatured(${u.id})" style="background:#10b981;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">🏠 Grant +14d Featured</button>`;
+          } else {
+            featuredAction = `<span style="color:var(--muted);font-size:0.75rem">Needs 5 referrals</span>`;
+          }
+          return `<tr>
           <td>${i + 1}</td>
           <td style="color:var(--white);font-weight:600">${u.full_name}</td>
           <td style="color:var(--muted);font-size:0.82rem">${u.email}</td>
@@ -1202,10 +1374,11 @@
             ? `<span style="color:#10b981">✓ Active until ${u.featured_listing_until?.slice(0,10)}</span>`
             : '<span style="color:var(--muted)">Inactive</span>'}</td>
           <td style="display:flex;gap:6px;flex-wrap:wrap">
-            <button onclick="adminGrantPriority(${u.id})" style="background:var(--accent);color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">⚡ +7d Priority</button>
-            <button onclick="adminGrantFeatured(${u.id})" style="background:#10b981;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700;white-space:nowrap">🏠 +14d Featured</button>
+            ${priorityAction}
+            ${featuredAction}
           </td>
-        </tr>`).join('')}</tbody>
+        </tr>`;
+        }).join('')}</tbody>
       </table></div>`;
     } catch (err) {
       div.innerHTML = `<p style="color:#ef4444">Could not load leaderboard: ${err.message}</p>`;
@@ -1228,6 +1401,26 @@
       const res = await fetch(`${API_BASE}/api/referrals/admin/grant-featured/${userId}`, { method: 'POST', headers: authHeaders() });
       const data = await res.json();
       alert('✅ ' + data.message);
+      loadReferralLeaderboard();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  async function adminCancelPriority(userId) {
+    if (!confirm('Cancel this user\'s active priority search placement now?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/revoke-priority/${userId}`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      alert('✅ ' + (data.message || 'Priority search cancelled.'));
+      loadReferralLeaderboard();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  async function adminCancelFeatured(userId) {
+    if (!confirm('Cancel this user\'s active featured listing now?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/referrals/admin/revoke-featured/${userId}`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      alert('✅ ' + (data.message || 'Featured listing cancelled.'));
       loadReferralLeaderboard();
     } catch (e) { alert('Error: ' + e.message); }
   }

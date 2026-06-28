@@ -10,5 +10,15 @@
       "source": "/api/(.*)",
       "destination": "/backend/api/index"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/subscriptions/send-renewal-reminders?secret=pikcarz-cron-2026",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/admin/cleanup-sold-listings?secret=pikcarz-cron-2026",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

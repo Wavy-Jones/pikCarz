@@ -31,6 +31,10 @@ class User(Base):
     dealer_address        = Column(String,  nullable=True)
     is_verified_dealer    = Column(Boolean, default=False)
 
+    # Recurring billing (PayFast subscription token) — lets us auto-charge
+    # the saved card when a free trial or paid period expires
+    payfast_token = Column(String, nullable=True, index=True)
+
     # ── Referral system ───────────────────────────────────────
     referral_code          = Column(String(16), unique=True, nullable=True, index=True)
     referred_by            = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

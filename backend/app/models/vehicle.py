@@ -59,6 +59,7 @@ class Vehicle(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=True)
+    sold_at    = Column(DateTime(timezone=True), nullable=True)  # set when marked Sold; ribbon shows 7 days, then auto-removed
     
     # Relationships
     owner      = relationship("User",      back_populates="vehicles")

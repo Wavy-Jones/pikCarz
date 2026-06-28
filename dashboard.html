@@ -48,7 +48,10 @@
     .listing-status-badge { position:absolute; top:10px; left:10px; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
     .badge-active { background:#10b981; color:#fff; }
     .badge-pending { background:#f59e0b; color:#fff; }
+    .badge-sold { background:#6b7280; color:#fff; }
     .badge-inactive { background:#6b7280; color:#fff; }
+    .sold-ribbon { position:absolute; top:14px; right:-32px; background:#ef4444; color:#fff; font-size:0.72rem; font-weight:800; letter-spacing:0.08em; padding:5px 40px; transform:rotate(35deg); box-shadow:0 2px 8px rgba(0,0,0,0.35); z-index:2; }
+    .btn-sold { background:#3b82f6; color:#fff; }
     .listing-body { padding:16px; }
     .listing-body h3 { font-size:1rem; color:var(--white); margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .listing-price { font-size:1.25rem; font-weight:700; color:var(--accent); margin-bottom:14px; }
@@ -854,26 +857,50 @@ async function loadMyListings() {
 function listingCard(v) {
   const img = (v.images && v.images[0]) ? v.images[0] : '';
   const imgStyle = img ? `background-image:url('${img}')` : `background:var(--surface)`;
-  const statusClass = v.status === 'active' ? 'badge-active' : v.status === 'pending' ? 'badge-pending' : 'badge-inactive';
+  const statusClass = v.status === 'active' ? 'badge-active' : v.status === 'pending' ? 'badge-pending' : v.status === 'sold' ? 'badge-sold' : 'badge-inactive';
+  const soldRibbon = v.status === 'sold' ? `<div class="sold-ribbon">SOLD</div>` : '';
+  const actionBtn = v.status === 'sold'
+    ? `<button class="btn-edit" onclick="unmarkSold(${v.id})" title="Undo — restore to Active">↩️ Undo Sold</button>`
+    : `<button class="btn-sold" onclick="markSold(${v.id})">🏷️ Mark Sold</button>`;
   return `
     <div class="my-listing-card">
       <div class="listing-img" style="${imgStyle}">
+        ${soldRibbon}
         <span class="listing-status-badge ${statusClass}">${v.status}</span>
       </div>
       <div class="listing-body">
         <h3>${v.title || `${v.year} ${v.make} ${v.model}`}</h3>
         <div class="listing-price">R ${Number(v.price).toLocaleString('en-ZA')}</div>
         <div style="display:flex;gap:12px;margin-bottom:12px;font-size:0.8rem;color:var(--muted)">
-          <span>👁 ${v.views || 0} views</span>
+          <span>👁️ ${v.views || 0} views</span>
           <span>💬 ${v.whatsapp_leads || 0} WhatsApp</span>
           <span>✉️ ${v.email_leads || 0} email</span>
         </div>
         <div class="listing-actions">
           <button class="btn-edit" onclick="editListing(${v.id})">Edit</button>
+          ${actionBtn}
           <button class="btn-del"  onclick="deleteListing(${v.id})">Delete</button>
         </div>
       </div>
     </div>`;
+}
+
+async function markSold(id) {
+  if (!confirm("Mark this vehicle as Sold?\n\nIt'll show a SOLD ribbon for 7 days, then be automatically removed from your dashboard.")) return;
+  try {
+    await api.post(`/api/vehicles/${id}/mark-sold`);
+    showToast('Marked as Sold! 🎉', 'success');
+    loadMyListings();
+  } catch (err) { showToast('Could not mark as sold: ' + err.message, 'error'); }
+}
+
+async function unmarkSold(id) {
+  if (!confirm('Undo Sold and restore this listing to Active?')) return;
+  try {
+    await api.post(`/api/vehicles/${id}/unmark-sold`);
+    showToast('Restored to Active.', 'info');
+    loadMyListings();
+  } catch (err) { showToast('Could not undo: ' + err.message, 'error'); }
 }
 
 // ── Create Modal ──────────────────────────────────────────────────────────────
@@ -1251,7 +1278,9 @@ async function loadPlans() {
 function openSubConfirm(tier, planName, trialLabel) {
   const isTrial = !!trialLabel;
   document.getElementById('sub-confirm-title').textContent = isTrial ? `Start ${trialLabel} Free Trial` : `Subscribe to ${planName}`;
-  document.getElementById('sub-confirm-msg').textContent   = isTrial ? `You're about to start your ${trialLabel} free trial of the ${planName} plan. No payment needed.` : `You'll be redirected to PayFast to complete payment for the ${planName} plan.`;
+  document.getElementById('sub-confirm-msg').textContent   = isTrial
+    ? `You're about to start your ${trialLabel} free trial of the ${planName} plan. You'll be asked to add a card on PayFast — you won't be charged today, but it'll automatically continue your subscription once the free trial ends.`
+    : `You'll be redirected to PayFast to complete payment for the ${planName} plan. It'll auto-renew monthly until you cancel.`;
   const confirmBtn = document.getElementById('sub-confirm-btn');
   confirmBtn.textContent = isTrial ? '🎉 Start Free Trial' : 'Proceed to Payment';
   confirmBtn.onclick = () => { closeSubConfirm(); doSubscribe(tier); };
@@ -1264,7 +1293,7 @@ async function doSubscribe(tier) {
   try {
     const res = await api.post(`/api/subscriptions/subscribe/${tier}`);
     if (res.payment_url && res.payment_params) {
-      const PARAM_ORDER = ['merchant_id','merchant_key','return_url','cancel_url','notify_url','name_first','name_last','email_address','m_payment_id','amount','item_name','signature'];
+      const PARAM_ORDER = ['merchant_id','merchant_key','return_url','cancel_url','notify_url','name_first','name_last','email_address','m_payment_id','amount','item_name','subscription_type','billing_date','recurring_amount','frequency','cycles','signature'];
       const form = document.createElement('form'); form.method = 'POST'; form.action = res.payment_url;
       const params = res.payment_params;
       const orderedKeys = PARAM_ORDER.filter(k => k in params).concat(Object.keys(params).filter(k => !PARAM_ORDER.includes(k)));
