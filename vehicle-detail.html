@@ -445,7 +445,7 @@
       padding: 20px 24px;
       margin-top: 20px;
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 16px;
       text-align: center;
     }
@@ -631,6 +631,24 @@
               </select>
             </div>
           </div>
+          <div class="finance-row">
+            <div class="finance-field">
+              <label>Balloon / Residual Payment (%)</label>
+              <select id="fc-balloon" onchange="calcFinance()">
+                <option value="0" selected>None (0%)</option>
+                <option value="10">10%</option>
+                <option value="15">15%</option>
+                <option value="20">20%</option>
+                <option value="25">25%</option>
+                <option value="30">30%</option>
+                <option value="35">35%</option>
+              </select>
+            </div>
+            <div class="finance-field">
+              <label>Balloon Amount (R)</label>
+              <input type="text" id="fc-balloon-amount" readonly tabindex="-1" style="opacity:0.75;cursor:default" />
+            </div>
+          </div>
           <div class="finance-result" id="fc-result">
             <div class="finance-result-item">
               <div class="label">Monthly Instalment</div>
@@ -644,8 +662,12 @@
               <div class="label">Total Interest</div>
               <div class="value" id="fc-interest">R 0</div>
             </div>
+            <div class="finance-result-item" id="fc-balloon-due-card" style="display:none">
+              <div class="label" id="fc-balloon-due-label">Balloon Due</div>
+              <div class="value" id="fc-balloon-due">R 0</div>
+            </div>
           </div>
-          <p class="finance-disclaimer">* This calculator provides an estimate only. Actual repayments depend on your credit profile, bank fees and insurance. Contact your bank or a registered financial service provider for a formal quote.</p>
+          <p class="finance-disclaimer">* This calculator provides an estimate only. A balloon/residual payment lowers your monthly instalment but leaves a lump sum owing at the end of the term — you'll need to pay it, refinance it, or trade in the vehicle. Actual repayments depend on your credit profile, bank fees and insurance. Contact your bank or a registered financial service provider for a formal quote.</p>
         </div>
 
         <!-- Additional Info -->
@@ -1065,20 +1087,50 @@ function calcFinance() {
   const deposit  = parseFloat(document.getElementById('fc-deposit').value) || 0;
   const ratePA   = parseFloat(document.getElementById('fc-rate').value)    || 0;
   const months   = parseInt(document.getElementById('fc-term').value)      || 60;
+  const balloonPct = parseFloat(document.getElementById('fc-balloon')?.value) || 0;
   const principal = Math.max(0, price - deposit);
+  const balloonAmount = principal * (balloonPct / 100);
   const fmt = n => 'R\u00a0' + Math.round(n).toLocaleString('en-ZA');
+
+  const balloonAmountField = document.getElementById('fc-balloon-amount');
+  if (balloonAmountField) balloonAmountField.value = balloonPct > 0 ? fmt(balloonAmount) : 'R\u00a00';
+
+  const balloonCard  = document.getElementById('fc-balloon-due-card');
+  const balloonLabel = document.getElementById('fc-balloon-due-label');
+
   if (principal <= 0 || ratePA <= 0) {
     document.getElementById('fc-monthly').textContent  = fmt(0);
     document.getElementById('fc-total').textContent    = fmt(0);
     document.getElementById('fc-interest').textContent = fmt(0);
+    if (balloonCard) balloonCard.style.display = 'none';
     return;
   }
+
   const r = ratePA / 100 / 12;
-  const monthly = principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
-  const total   = monthly * months;
+  // With a balloon payment, the financed amount amortizes down to the
+  // balloon (residual) value by the end of the term, instead of to zero.
+  // Standard balloon-loan formula:
+  //   M = (P*r - B*r/(1+r)^n) / (1 - (1+r)^-n)
+  // where P = principal, B = balloon amount, n = months, r = monthly rate.
+  const growth = Math.pow(1 + r, months);
+  const monthly = (principal * r - balloonAmount * r / growth) / (1 - 1 / growth);
+  const totalInstalments = monthly * months;
+  const totalRepayment   = totalInstalments + balloonAmount;
+  const totalInterest    = totalRepayment - principal;
+
   document.getElementById('fc-monthly').textContent  = fmt(monthly);
-  document.getElementById('fc-total').textContent    = fmt(total);
-  document.getElementById('fc-interest').textContent = fmt(total - principal);
+  document.getElementById('fc-total').textContent    = fmt(totalRepayment);
+  document.getElementById('fc-interest').textContent = fmt(totalInterest);
+
+  if (balloonCard) {
+    if (balloonPct > 0) {
+      balloonCard.style.display = '';
+      if (balloonLabel) balloonLabel.textContent = `Balloon Due (Month ${months})`;
+      document.getElementById('fc-balloon-due').textContent = fmt(balloonAmount);
+    } else {
+      balloonCard.style.display = 'none';
+    }
+  }
 }
 
 window.addEventListener('DOMContentLoaded', loadVehicle);
