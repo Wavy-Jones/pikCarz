@@ -46,10 +46,13 @@ def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
     resp.seller_phone  = vehicle.contact_phone or (owner.phone if owner else None) or None
     resp.seller_email  = owner.email if owner else None
     # Referral badges
-    resp.seller_is_founding_dealer = bool(owner.is_founding_dealer) if owner else False
-    resp.seller_is_ambassador      = bool(owner.is_ambassador)      if owner else False
+    # Referral perks only apply to non-admin users — admin-posted listings
+    # should not show priority/featured badges or float to the top via referral boosts.
+    is_admin_owner = (owner and owner.role == UserRole.ADMIN)
+    resp.seller_is_founding_dealer = bool(owner.is_founding_dealer) if (owner and not is_admin_owner) else False
+    resp.seller_is_ambassador      = bool(owner.is_ambassador)      if (owner and not is_admin_owner) else False
     resp.seller_priority_active    = bool(
-        owner and owner.priority_search_until and owner.priority_search_until > now
+        not is_admin_owner and owner and owner.priority_search_until and owner.priority_search_until > now
     )
     return resp
 
@@ -194,10 +197,24 @@ def list_vehicles(
     """List all vehicles with filters and pagination. Expired listings are excluded."""
     query = db.query(Vehicle).filter(Vehicle.status == VehicleStatus(status))
 
-    # Exclude listings past their expiry date
     now = datetime.utcnow()
+
+    # Only exclude listings that have an explicit expiry AND are past it.
+    # Regular user listings get expires_at=30 days but should NOT disappear
+    # from browse after 30 days — they stay until the seller removes them or
+    # their subscription lapses. Only admin-on-behalf listings (180-day window)
+    # are meant to auto-expire. So we filter out expired admin listings only,
+    # by checking owner role via a subquery rather than a blanket expires_at check.
+    from sqlalchemy import and_, or_
+    admin_ids_sq = db.query(User.id).filter(User.role == UserRole.ADMIN).subquery()
     query = query.filter(
-        (Vehicle.expires_at == None) | (Vehicle.expires_at > now)
+        or_(
+            # Not an admin-owned listing — never auto-expire from browse
+            Vehicle.owner_id.notin_(admin_ids_sq),
+            # Admin-owned listing that hasn't expired yet
+            Vehicle.expires_at == None,
+            Vehicle.expires_at > now,
+        )
     )
 
     if category:
@@ -231,15 +248,24 @@ def list_vehicles(
     offset = (page - 1) * per_page
 
     # ── Sort: priority sellers first, then newest ──────────────────────────────
-    # JOIN users so we can order by priority_search_until
-    from sqlalchemy import case as sa_case
+    # Use outerjoin so listings whose owner was deleted are still returned.
+    # Admin-owned listings are deliberately excluded from the priority boost —
+    # priority/featured placement is a referral reward for real users, not for
+    # admin-posted listings.
+    from sqlalchemy import case as sa_case, and_
     priority_flag = sa_case(
-        (User.priority_search_until > now, 0),
-        else_=1
+        and_(
+            User.role != UserRole.ADMIN,
+            User.priority_search_until != None,
+            User.priority_search_until > now,
+        ),
+        True,
+        0,
+        else_=1,
     )
     vehicles = (
         query
-        .join(User, User.id == Vehicle.owner_id)
+        .outerjoin(User, User.id == Vehicle.owner_id)
         .order_by(priority_flag, Vehicle.created_at.desc())
         .offset(offset).limit(per_page)
         .all()
