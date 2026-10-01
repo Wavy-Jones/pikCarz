@@ -254,13 +254,14 @@ def list_vehicles(
     # admin-posted listings.
     from sqlalchemy import case as sa_case, and_
     priority_flag = sa_case(
-        and_(
-            User.role != UserRole.ADMIN,
-            User.priority_search_until != None,
-            User.priority_search_until > now,
+        (
+            and_(
+                User.role != UserRole.ADMIN,
+                User.priority_search_until.isnot(None),
+                User.priority_search_until > now,
+            ),
+            0,
         ),
-        True,
-        0,
         else_=1,
     )
     vehicles = (
