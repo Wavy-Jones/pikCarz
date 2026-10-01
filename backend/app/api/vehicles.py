@@ -283,16 +283,6 @@ def list_vehicles(
     )
 
 
-# ── Get Single Vehicle ─────────────────────────────────────────────────────────────
-
-# ── Bulk CSV Upload
-    for vehicle in vehicles:
-        owner = db.query(User).filter(User.id == vehicle.owner_id).first()
-        vehicle_responses.append(_build_response(vehicle, owner))
-
-    return VehicleListResponse(total=total, page=page, per_page=per_page, vehicles=vehicle_responses)
-
-
 # ── Image Upload / Delete ─────────────────────────────────────────────────────
 
 @router.post("/{vehicle_id}/images", response_model=VehicleResponse)
