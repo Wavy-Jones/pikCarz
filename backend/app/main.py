@@ -151,6 +151,23 @@ def health_check():
     return {"status": "healthy"}
 
 
+@app.get("/api/test")
+async def test_routing(request: Request):
+    """Diagnostic endpoint — remove after confirming routing works."""
+    auth_routes = [
+        {"path": r.path, "methods": list(r.methods)}
+        for r in app.routes
+        if hasattr(r, "path") and hasattr(r, "methods") and "auth" in r.path.lower()
+    ]
+    return {
+        "url_path":   request.url.path,
+        "scope_path": request.scope.get("path"),
+        "root_path":  request.scope.get("root_path", ""),
+        "total_routes": len(app.routes),
+        "auth_routes":  auth_routes,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
