@@ -20,7 +20,8 @@ import hashlib
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
 
 
-def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
+def _seller_name(vehicle, owner):
+    # type: (Vehicle, Optional[User]) -> str
     """
     Return the display name for a listing.
     Admin listings on behalf of someone use contact_name.
@@ -33,7 +34,8 @@ def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
     return "Unknown"
 
 
-def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
+def _build_response(vehicle, owner):
+    # type: (Vehicle, Optional[User]) -> VehicleResponse
     """Build a VehicleResponse with correct seller, contact, and badge info."""
     from datetime import datetime, timezone
     now  = datetime.now(tz=timezone.utc)
@@ -60,7 +62,8 @@ def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
 # ── Public Stats ─────────────────────────────────────────────────────────────
 
 @router.get("/public-stats")
-def get_public_stats(db: Session = Depends(get_db)):
+def get_public_stats(db=Depends(get_db)):
+    # type: (Session) -> dict
     """
     Public statistics for the homepage and About page — no auth required.
     Returns live counts from the database.
@@ -93,7 +96,8 @@ def get_public_stats(db: Session = Depends(get_db)):
 # ── Upload Signature ──────────────────────────────────────────────────────────
 
 @router.post("/upload-signature")
-def get_upload_signature(current_user: User = Depends(get_current_user)):
+def get_upload_signature(current_user=Depends(get_current_user)):
+    # type: (User) -> dict
     """
     Return a signed Cloudinary upload signature so the browser can
     upload images directly to Cloudinary without proxying through Vercel.
@@ -114,7 +118,8 @@ def get_upload_signature(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/upload-report-signature")
-def get_report_upload_signature(current_user: User = Depends(get_current_user)):
+def get_report_upload_signature(current_user=Depends(get_current_user)):
+    # type: (User) -> dict
     """
     Return a signed Cloudinary upload signature for raw file uploads
     (PDFs, Word docs). Uses a separate folder and resource_type=raw.
@@ -138,10 +143,11 @@ def get_report_upload_signature(current_user: User = Depends(get_current_user)):
 
 @router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
 def create_vehicle(
-    vehicle_data: VehicleCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    vehicle_data,
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (VehicleCreate, User, Session) -> VehicleResponse
     """Create a new vehicle listing."""
     # Admin listings on behalf of someone expire after 6 months.
     # All other listings expire after 30 days.
@@ -181,18 +187,18 @@ def create_vehicle(
 
 @router.get("/", response_model=VehicleListResponse)
 def list_vehicles(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    category: Optional[str] = None,
-    make: Optional[str] = None,
-    min_price: Optional[float] = None,
-    max_price: Optional[float] = None,
-    province: Optional[str] = None,
-    transmission: Optional[str] = None,
-    fuel_type: Optional[str] = None,
-    keyword: Optional[str] = None,
-    status: str = "active",
-    db: Session = Depends(get_db)
+    page=Query(1, ge=1),
+    per_page=Query(20, ge=1, le=100),
+    category=None,
+    make=None,
+    min_price=None,
+    max_price=None,
+    province=None,
+    transmission=None,
+    fuel_type=None,
+    keyword=None,
+    status="active",
+    db=Depends(get_db)
 ):
     """List all vehicles with filters and pagination. Expired listings are excluded."""
     query = db.query(Vehicle).filter(Vehicle.status == VehicleStatus(status))
@@ -288,11 +294,12 @@ def list_vehicles(
 
 @router.post("/{vehicle_id}/images", response_model=VehicleResponse)
 async def upload_vehicle_images(
-    vehicle_id: int,
-    files: List[UploadFile] = File(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    vehicle_id,
+    files=File(...),
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (int, List[UploadFile], User, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -307,11 +314,12 @@ async def upload_vehicle_images(
 
 @router.delete("/{vehicle_id}/images/{image_index}", response_model=VehicleResponse)
 def delete_vehicle_image(
-    vehicle_id: int,
-    image_index: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    vehicle_id,
+    image_index,
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (int, int, User, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -329,7 +337,8 @@ def delete_vehicle_image(
 # ── Get / Update / Delete Single Vehicle ─────────────────────────────────────
 
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
-def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
+def get_vehicle(vehicle_id, db=Depends(get_db)):
+    # type: (int, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -342,7 +351,8 @@ def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{vehicle_id}/lead")
-def track_lead(vehicle_id: int, lead_type: str = Query(..., regex="^(whatsapp|email)$"), db: Session = Depends(get_db)):
+def track_lead(vehicle_id, lead_type=Query(..., regex="^(whatsapp|email)$"), db=Depends(get_db)):
+    # type: (int, str, Session) -> dict
     """Track when a buyer clicks WhatsApp or Email on a listing."""
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
@@ -357,10 +367,11 @@ def track_lead(vehicle_id: int, lead_type: str = Query(..., regex="^(whatsapp|em
 
 @router.post("/{vehicle_id}/mark-sold", response_model=VehicleResponse)
 def mark_vehicle_sold(
-    vehicle_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    vehicle_id,
+    current_user=Depends(get_current_user),
+    db=Depends(get_db),
 ):
+    # type: (int, User, Session) -> VehicleResponse
     """
     Mark a vehicle as sold. Shows a 'Sold' ribbon on the listing for 7 days,
     then it's automatically removed from the seller's dashboard so the same
@@ -399,10 +410,11 @@ def mark_vehicle_sold(
 
 @router.post("/{vehicle_id}/unmark-sold", response_model=VehicleResponse)
 def unmark_vehicle_sold(
-    vehicle_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    vehicle_id,
+    current_user=Depends(get_current_user),
+    db=Depends(get_db),
 ):
+    # type: (int, User, Session) -> VehicleResponse
     """Undo an accidental 'Mark as Sold' — restores the listing to Active."""
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
@@ -420,11 +432,12 @@ def unmark_vehicle_sold(
 
 @router.put("/{vehicle_id}", response_model=VehicleResponse)
 def update_vehicle(
-    vehicle_id: int,
-    vehicle_data: VehicleUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    vehicle_id,
+    vehicle_data,
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (int, VehicleUpdate, User, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -439,10 +452,11 @@ def update_vehicle(
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vehicle(
-    vehicle_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    vehicle_id,
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (int, User, Session) -> None
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -456,10 +470,11 @@ def delete_vehicle(
 
 @router.post("/bulk-upload")
 async def bulk_upload_vehicles(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    file=File(...),
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (UploadFile, User, Session) -> dict
     """
     Upload a CSV file to create multiple listings at once.
     Required columns: title, make, model, year, price, province
@@ -517,11 +532,12 @@ async def bulk_upload_vehicles(
 
 @router.get("/my/listings", response_model=VehicleListResponse)
 def get_my_vehicles(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    page=Query(1, ge=1),
+    per_page=Query(20, ge=1, le=100),
+    current_user=Depends(get_current_user),
+    db=Depends(get_db)
 ):
+    # type: (int, int, User, Session) -> VehicleListResponse
     """Get all vehicles owned by current user (including admin-on-behalf listings)."""
     query = db.query(Vehicle).filter(Vehicle.owner_id == current_user.id)
     total = query.count()
