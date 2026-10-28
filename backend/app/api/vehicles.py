@@ -20,7 +20,7 @@ import hashlib
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
 
 
-def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
+def _seller_name(vehicle: Vehicle, owner: "User | None") -> str:
     """
     Return the display name for a listing.
     Admin listings on behalf of someone use contact_name.
@@ -33,7 +33,7 @@ def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
     return "Unknown"
 
 
-def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
+def _build_response(vehicle: Vehicle, owner: "User | None") -> VehicleResponse:
     """Build a VehicleResponse with correct seller, contact, and badge info."""
     from datetime import datetime, timezone
     now  = datetime.now(tz=timezone.utc)
@@ -325,7 +325,7 @@ def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{vehicle_id}/lead")
-def track_lead(vehicle_id: int, lead_type: str = Query(..., regex="^(whatsapp|email)$"), db: Session = Depends(get_db)):
+def track_lead(vehicle_id: int, lead_type: str = Query(..., pattern="^(whatsapp|email)$"), db: Session = Depends(get_db)):
     """Track when a buyer clicks WhatsApp or Email on a listing."""
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
