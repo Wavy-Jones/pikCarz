@@ -1,77 +1,123 @@
 """
-Vercel serverless entry point for pikCarz FastAPI backend.
+pikcarz.co.za — Vercel serverless entry point (diagnostic + smart-fix build)
 
-Root cause fix: Vercel's uv-based Python runtime may set scope["path"] to
-the function destination (/api/index) instead of the original request URL.
-VercelPathFix corrects it from the x-matched-path header before FastAPI sees it.
+Every request logs the full ASGI scope to stdout (visible in Vercel → Logs →
+Runtime Logs).  A path patch is applied ONLY when scope["path"] is empty or is
+"/api/index" (i.e., clearly the function destination, not the real URL).
+Any other path is passed through untouched — the previous VercelPathFix was
+overwriting the correct path with x-matched-path=/api/index, causing the 404.
 """
 import sys
+import json
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from starlette.types import Scope, Receive, Send
 
-
-class VercelPathFix:
-    """
-    Vercel's new uv runtime can pass the wrong scope['path'] to the ASGI app.
-    It passes the function destination (/api/index) or empty string instead of
-    the actual request path (/api/auth/login, /api/vehicles, etc.).
-
-    Fix: read x-matched-path header (Vercel sets this to the original URL path)
-    and override scope['path'] before FastAPI routes the request.
-    """
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send):
-        if scope["type"] == "http":
-            headers = dict(scope.get("headers", []))
-
-            matched = headers.get(b"x-matched-path", b"").decode()
-            original = headers.get(b"x-forwarded-uri", b"").decode()
-            host_url  = headers.get(b"x-vercel-deployment-url", b"").decode()
-
-            # Pick the best path source: x-matched-path → x-forwarded-uri → scope
-            candidate = (matched or original or "").split("?")[0]
-
-            if candidate and candidate != scope.get("path", ""):
-                scope = dict(scope)
-                scope["path"] = candidate
-                scope["raw_path"] = candidate.encode()
-
-            # Guard: path must start with '/'
-            if not scope.get("path", "").startswith("/"):
-                scope = dict(scope)
-                scope["path"] = "/" + scope.get("path", "")
-                scope["raw_path"] = scope["path"].encode()
-
-        await self.app(scope, receive, send)
-
-
-# Import the real FastAPI application
+# ── Import the real FastAPI app ───────────────────────────────────────────────
+_fastapi_app = None
+_import_error = None
 try:
-    from app.main import app as fastapi_app
-    handler = VercelPathFix(fastapi_app)
-except Exception as import_err:
-    # If the app fails to import, return the error as JSON so we can debug
-    from fastapi import FastAPI
-    from fastapi.responses import JSONResponse
-    import traceback
+    from app.main import app as _fastapi_app
+except Exception as _exc:
+    import traceback as _tb
+    _import_error = {
+        "type": type(_exc).__name__,
+        "msg": str(_exc),
+        "traceback": _tb.format_exc(),
+    }
 
-    fallback = FastAPI()
 
-    @fallback.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-    async def import_error_handler(path: str = ""):
-        return JSONResponse(
-            status_code=500,
-            content={
+# ── ASGI handler ──────────────────────────────────────────────────────────────
+class Handler:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        # Pass non-HTTP events straight through (WebSocket lifespan, etc.)
+        if scope["type"] != "http":
+            if _fastapi_app:
+                await _fastapi_app(scope, receive, send)
+            return
+
+        # ── Decode headers ────────────────────────────────────────────────────
+        headers: dict[str, str] = {}
+        for k, v in scope.get("headers", []):
+            try:
+                headers[k.decode().lower()] = v.decode(errors="replace")
+            except Exception:
+                pass
+
+        # ── Snapshot what Vercel actually sent us ─────────────────────────────
+        original_path = scope.get("path", "")
+        diag = {
+            "original_path": original_path,
+            "root_path": scope.get("root_path", ""),
+            "raw_path": scope.get("raw_path", b"").decode(errors="replace"),
+            "method": scope.get("method", ""),
+            "x-matched-path": headers.get("x-matched-path", "NOT-SET"),
+            "x-forwarded-uri": headers.get("x-forwarded-uri", "NOT-SET"),
+            "x-original-url": headers.get("x-original-url", "NOT-SET"),
+            "x-vercel-id": headers.get("x-vercel-id", "NOT-SET"),
+            "import_ok": _import_error is None,
+        }
+        # Always print — visible in Vercel → Logs → Runtime Logs
+        print(f"[pikcarz-diag] {json.dumps(diag)}", flush=True)
+
+        # ── Handle import failure ─────────────────────────────────────────────
+        if _import_error:
+            body = json.dumps({
                 "error": "App import failed",
-                "detail": str(import_err),
-                "traceback": traceback.format_exc(),
-            },
-        )
+                **_import_error,
+            }).encode()
+            await send({
+                "type": "http.response.start",
+                "status": 500,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"access-control-allow-origin", b"*"),
+                ],
+            })
+            await send({"type": "http.response.body", "body": body, "more_body": False})
+            return
 
-    handler = VercelPathFix(fallback)
+        # ── Fix path ONLY if it is clearly wrong ─────────────────────────────
+        # The previous VercelPathFix was unconditionally overwriting scope["path"]
+        # with x-matched-path. When x-matched-path == "/api/index" (the Vercel
+        # function destination) and scope["path"] was already the real URL, the
+        # "fix" corrupted the path and caused all 404s.
+        #
+        # Safe rule: only patch when the path is clearly the function destination.
+        WRONG_PATHS = {"", "/api/index", "api/index"}
+        if original_path in WRONG_PATHS:
+            for hdr in ("x-matched-path", "x-original-url", "x-forwarded-uri"):
+                candidate = headers.get(hdr, "").split("?")[0]
+                if candidate and candidate not in WRONG_PATHS:
+                    scope = {**scope, "path": candidate, "raw_path": candidate.encode()}
+                    print(
+                        f"[pikcarz-diag] path patched via {hdr}: "
+                        f"{original_path!r} → {candidate!r}",
+                        flush=True,
+                    )
+                    break
+
+        # Ensure path starts with /
+        p = scope.get("path", "/")
+        if not p.startswith("/"):
+            scope = {**scope, "path": "/" + p, "raw_path": ("/" + p).encode()}
+
+        # ── Route to real app, capturing response status for logging ──────────
+        status_holder: list[int | None] = [None]
+
+        async def capturing_send(msg):
+            if msg["type"] == "http.response.start":
+                status_holder[0] = msg.get("status")
+                print(
+                    f"[pikcarz-diag] response: status={msg.get('status')} "
+                    f"path={scope.get('path')}",
+                    flush=True,
+                )
+            await send(msg)
+
+        await _fastapi_app(scope, receive, capturing_send)
+
+
+handler = Handler()
