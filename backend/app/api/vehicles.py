@@ -20,8 +20,7 @@ import hashlib
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
 
 
-def _seller_name(vehicle, owner):
-    # type: (Vehicle, Optional[User]) -> str
+def _seller_name(vehicle: Vehicle, owner: User | None) -> str:
     """
     Return the display name for a listing.
     Admin listings on behalf of someone use contact_name.
@@ -34,8 +33,7 @@ def _seller_name(vehicle, owner):
     return "Unknown"
 
 
-def _build_response(vehicle, owner):
-    # type: (Vehicle, Optional[User]) -> VehicleResponse
+def _build_response(vehicle: Vehicle, owner: User | None) -> VehicleResponse:
     """Build a VehicleResponse with correct seller, contact, and badge info."""
     from datetime import datetime, timezone
     now  = datetime.now(tz=timezone.utc)
@@ -48,13 +46,10 @@ def _build_response(vehicle, owner):
     resp.seller_phone  = vehicle.contact_phone or (owner.phone if owner else None) or None
     resp.seller_email  = owner.email if owner else None
     # Referral badges
-    # Referral perks only apply to non-admin users — admin-posted listings
-    # should not show priority/featured badges or float to the top via referral boosts.
-    is_admin_owner = (owner and owner.role == UserRole.ADMIN)
-    resp.seller_is_founding_dealer = bool(owner.is_founding_dealer) if (owner and not is_admin_owner) else False
-    resp.seller_is_ambassador      = bool(owner.is_ambassador)      if (owner and not is_admin_owner) else False
+    resp.seller_is_founding_dealer = bool(owner.is_founding_dealer) if owner else False
+    resp.seller_is_ambassador      = bool(owner.is_ambassador)      if owner else False
     resp.seller_priority_active    = bool(
-        not is_admin_owner and owner and owner.priority_search_until and owner.priority_search_until > now
+        owner and owner.priority_search_until and owner.priority_search_until > now
     )
     return resp
 
@@ -62,8 +57,7 @@ def _build_response(vehicle, owner):
 # ── Public Stats ─────────────────────────────────────────────────────────────
 
 @router.get("/public-stats")
-def get_public_stats(db=Depends(get_db)):
-    # type: (Session) -> dict
+def get_public_stats(db: Session = Depends(get_db)):
     """
     Public statistics for the homepage and About page — no auth required.
     Returns live counts from the database.
@@ -96,8 +90,7 @@ def get_public_stats(db=Depends(get_db)):
 # ── Upload Signature ──────────────────────────────────────────────────────────
 
 @router.post("/upload-signature")
-def get_upload_signature(current_user=Depends(get_current_user)):
-    # type: (User) -> dict
+def get_upload_signature(current_user: User = Depends(get_current_user)):
     """
     Return a signed Cloudinary upload signature so the browser can
     upload images directly to Cloudinary without proxying through Vercel.
@@ -118,8 +111,7 @@ def get_upload_signature(current_user=Depends(get_current_user)):
 
 
 @router.post("/upload-report-signature")
-def get_report_upload_signature(current_user=Depends(get_current_user)):
-    # type: (User) -> dict
+def get_report_upload_signature(current_user: User = Depends(get_current_user)):
     """
     Return a signed Cloudinary upload signature for raw file uploads
     (PDFs, Word docs). Uses a separate folder and resource_type=raw.
@@ -143,11 +135,10 @@ def get_report_upload_signature(current_user=Depends(get_current_user)):
 
 @router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
 def create_vehicle(
-    vehicle_data,
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    vehicle_data: VehicleCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (VehicleCreate, User, Session) -> VehicleResponse
     """Create a new vehicle listing."""
     # Admin listings on behalf of someone expire after 6 months.
     # All other listings expire after 30 days.
@@ -187,40 +178,26 @@ def create_vehicle(
 
 @router.get("/", response_model=VehicleListResponse)
 def list_vehicles(
-    page=Query(1, ge=1),
-    per_page=Query(20, ge=1, le=100),
-    category=None,
-    make=None,
-    min_price=None,
-    max_price=None,
-    province=None,
-    transmission=None,
-    fuel_type=None,
-    keyword=None,
-    status="active",
-    db=Depends(get_db)
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    category: Optional[str] = None,
+    make: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    province: Optional[str] = None,
+    transmission: Optional[str] = None,
+    fuel_type: Optional[str] = None,
+    keyword: Optional[str] = None,
+    status: str = "active",
+    db: Session = Depends(get_db)
 ):
     """List all vehicles with filters and pagination. Expired listings are excluded."""
     query = db.query(Vehicle).filter(Vehicle.status == VehicleStatus(status))
 
+    # Exclude listings past their expiry date
     now = datetime.utcnow()
-
-    # Only exclude listings that have an explicit expiry AND are past it.
-    # Regular user listings get expires_at=30 days but should NOT disappear
-    # from browse after 30 days — they stay until the seller removes them or
-    # their subscription lapses. Only admin-on-behalf listings (180-day window)
-    # are meant to auto-expire. So we filter out expired admin listings only,
-    # by checking owner role via a subquery rather than a blanket expires_at check.
-    from sqlalchemy import and_, or_
-    admin_ids_sq = db.query(User.id).filter(User.role == UserRole.ADMIN).subquery()
     query = query.filter(
-        or_(
-            # Not an admin-owned listing — never auto-expire from browse
-            Vehicle.owner_id.notin_(admin_ids_sq),
-            # Admin-owned listing that hasn't expired yet
-            Vehicle.expires_at == None,
-            Vehicle.expires_at > now,
-        )
+        (Vehicle.expires_at == None) | (Vehicle.expires_at > now)
     )
 
     if category:
@@ -254,25 +231,15 @@ def list_vehicles(
     offset = (page - 1) * per_page
 
     # ── Sort: priority sellers first, then newest ──────────────────────────────
-    # Use outerjoin so listings whose owner was deleted are still returned.
-    # Admin-owned listings are deliberately excluded from the priority boost —
-    # priority/featured placement is a referral reward for real users, not for
-    # admin-posted listings.
-    from sqlalchemy import case as sa_case, and_
+    # JOIN users so we can order by priority_search_until
+    from sqlalchemy import case as sa_case
     priority_flag = sa_case(
-        (
-            and_(
-                User.role != UserRole.ADMIN,
-                User.priority_search_until.isnot(None),
-                User.priority_search_until > now,
-            ),
-            0,
-        ),
-        else_=1,
+        (User.priority_search_until > now, 0),
+        else_=1
     )
     vehicles = (
         query
-        .outerjoin(User, User.id == Vehicle.owner_id)
+        .join(User, User.id == Vehicle.owner_id)
         .order_by(priority_flag, Vehicle.created_at.desc())
         .offset(offset).limit(per_page)
         .all()
@@ -290,16 +257,25 @@ def list_vehicles(
     )
 
 
+# ── Get Single Vehicle ─────────────────────────────────────────────────────────────
+
+# ── Bulk CSV Upload
+    for vehicle in vehicles:
+        owner = db.query(User).filter(User.id == vehicle.owner_id).first()
+        vehicle_responses.append(_build_response(vehicle, owner))
+
+    return VehicleListResponse(total=total, page=page, per_page=per_page, vehicles=vehicle_responses)
+
+
 # ── Image Upload / Delete ─────────────────────────────────────────────────────
 
 @router.post("/{vehicle_id}/images", response_model=VehicleResponse)
 async def upload_vehicle_images(
-    vehicle_id,
-    files=File(...),
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    vehicle_id: int,
+    files: List[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (int, List[UploadFile], User, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -314,12 +290,11 @@ async def upload_vehicle_images(
 
 @router.delete("/{vehicle_id}/images/{image_index}", response_model=VehicleResponse)
 def delete_vehicle_image(
-    vehicle_id,
-    image_index,
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    vehicle_id: int,
+    image_index: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (int, int, User, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -337,8 +312,7 @@ def delete_vehicle_image(
 # ── Get / Update / Delete Single Vehicle ─────────────────────────────────────
 
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
-def get_vehicle(vehicle_id, db=Depends(get_db)):
-    # type: (int, Session) -> VehicleResponse
+def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -351,8 +325,7 @@ def get_vehicle(vehicle_id, db=Depends(get_db)):
 
 
 @router.post("/{vehicle_id}/lead")
-def track_lead(vehicle_id, lead_type=Query(..., regex="^(whatsapp|email)$"), db=Depends(get_db)):
-    # type: (int, str, Session) -> dict
+def track_lead(vehicle_id: int, lead_type: str = Query(..., regex="^(whatsapp|email)$"), db: Session = Depends(get_db)):
     """Track when a buyer clicks WhatsApp or Email on a listing."""
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
@@ -367,11 +340,10 @@ def track_lead(vehicle_id, lead_type=Query(..., regex="^(whatsapp|email)$"), db=
 
 @router.post("/{vehicle_id}/mark-sold", response_model=VehicleResponse)
 def mark_vehicle_sold(
-    vehicle_id,
-    current_user=Depends(get_current_user),
-    db=Depends(get_db),
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    # type: (int, User, Session) -> VehicleResponse
     """
     Mark a vehicle as sold. Shows a 'Sold' ribbon on the listing for 7 days,
     then it's automatically removed from the seller's dashboard so the same
@@ -410,11 +382,10 @@ def mark_vehicle_sold(
 
 @router.post("/{vehicle_id}/unmark-sold", response_model=VehicleResponse)
 def unmark_vehicle_sold(
-    vehicle_id,
-    current_user=Depends(get_current_user),
-    db=Depends(get_db),
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    # type: (int, User, Session) -> VehicleResponse
     """Undo an accidental 'Mark as Sold' — restores the listing to Active."""
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
@@ -432,12 +403,11 @@ def unmark_vehicle_sold(
 
 @router.put("/{vehicle_id}", response_model=VehicleResponse)
 def update_vehicle(
-    vehicle_id,
-    vehicle_data,
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    vehicle_id: int,
+    vehicle_data: VehicleUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (int, VehicleUpdate, User, Session) -> VehicleResponse
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -452,11 +422,10 @@ def update_vehicle(
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vehicle(
-    vehicle_id,
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (int, User, Session) -> None
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -470,11 +439,10 @@ def delete_vehicle(
 
 @router.post("/bulk-upload")
 async def bulk_upload_vehicles(
-    file=File(...),
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (UploadFile, User, Session) -> dict
     """
     Upload a CSV file to create multiple listings at once.
     Required columns: title, make, model, year, price, province
@@ -532,12 +500,11 @@ async def bulk_upload_vehicles(
 
 @router.get("/my/listings", response_model=VehicleListResponse)
 def get_my_vehicles(
-    page=Query(1, ge=1),
-    per_page=Query(20, ge=1, le=100),
-    current_user=Depends(get_current_user),
-    db=Depends(get_db)
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # type: (int, int, User, Session) -> VehicleListResponse
     """Get all vehicles owned by current user (including admin-on-behalf listings)."""
     query = db.query(Vehicle).filter(Vehicle.owner_id == current_user.id)
     total = query.count()
