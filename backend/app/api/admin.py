@@ -379,6 +379,34 @@ def _notify_search_alerts(vehicle: Vehicle, db: Session):
         )
 
 
+@router.put("/vehicles/{vehicle_id}/relist", response_model=VehicleResponse)
+def relist_vehicle(
+    vehicle_id: int,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Relist a SOLD (or REJECTED) vehicle — clears sold_at, extends expires_at
+    by 30 days from now, and sets status back to ACTIVE.
+    """
+    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not v:
+        raise HTTPException(404, "Vehicle not found")
+    if v.status not in (VehicleStatus.SOLD, VehicleStatus.REJECTED, VehicleStatus.ACTIVE):
+        raise HTTPException(400, f"Cannot relist a vehicle with status '{v.status.value}'")
+    now = _now_aware()
+    v.status     = VehicleStatus.ACTIVE
+    v.sold_at    = None
+    v.expires_at = now + timedelta(days=30)
+    db.commit()
+    db.refresh(v)
+    try:
+        _notify_search_alerts(v, db)
+    except Exception as e:
+        print(f"[search_alerts] notification error on relist: {e}")
+    return _vehicle_response(v, db.query(User).filter(User.id == v.owner_id).first())
+
+
 @router.put("/vehicles/{vehicle_id}/reject", response_model=VehicleResponse)
 def reject_vehicle(vehicle_id: int, current_admin=Depends(get_current_admin), db: Session = Depends(get_db)):
     v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()

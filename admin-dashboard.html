@@ -37,6 +37,8 @@
     .btn-edit-v  { background: var(--surface); color: var(--white); border: 1px solid var(--border); padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: border-color 0.2s; }
     .btn-edit-v:hover  { border-color: var(--accent); }
     .btn-del-v   { background: #ef4444; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-relist  { background: #3b82f6; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .btn-relist:hover  { background: #2563eb; }
     .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
     .empty-state svg { width: 64px; height: 64px; stroke: var(--muted); margin-bottom: 16px; }
     .sub-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
@@ -726,6 +728,7 @@
         <button class="btn-edit-v" onclick="openEditById(${v.id})">✎ Edit</button>
         ${isPending ? `<button class="btn-approve" onclick="approveVehicle(${v.id})">✓ Approve</button>` : ''}
         ${isPending ? `<button class="btn-reject"  onclick="rejectVehicle(${v.id})">✗ Reject</button>`  : ''}
+        ${v.status === 'SOLD' || v.status === 'REJECTED' ? `<button class="btn-relist" onclick="relistVehicle(${v.id})">🔄 Relist</button>` : ''}
         <button class="btn-del-v" onclick="adminDeleteVehicle(${v.id})">🗑 Delete</button>
       </div>`;
     return `
@@ -768,6 +771,17 @@
       await Promise.allSettled([loadStats(), loadAllListings()]);
       alert('Vehicle rejected.');
     } catch (err) { alert('Error rejecting vehicle: ' + err.message); }
+  }
+
+  /* ── Relist Vehicle ──────────────────────── */
+  async function relistVehicle(vehicleId) {
+    if (!confirm('Relist this vehicle as ACTIVE? It will be live for 30 days from today.')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/vehicles/${vehicleId}/relist`, { method: 'PUT', headers: authHeaders() });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || `Server error ${res.status}`); }
+      await Promise.allSettled([loadStats(), loadAllListings()]);
+      alert('✅ Vehicle relisted and is now active for 30 days!');
+    } catch (err) { alert('Error relisting vehicle: ' + err.message); }
   }
 
   /* ── Delete Vehicle ───────────────────────── */
