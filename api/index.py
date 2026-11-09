@@ -1,35 +1,18 @@
 """
-DEBUG handler — dumps raw scope and headers so we can see exactly what
-Vercel passes to the ASGI function.  Remove once routing is confirmed.
+Vercel ASGI entrypoint for PikCarz API (root-level deployment).
+
+Deployed from repo root; loads FastAPI app from backend/.
+The variable MUST be named 'app' for Vercel's Python runtime to detect it.
 """
-import json
+import os
+import sys
 
-async def handler(scope, receive, send):
-    if scope["type"] != "http":
-        return
+# __file__ is repo_root/api/index.py at runtime.
+# We need repo_root/backend/ on sys.path so 'from app.main import app' works.
+_here = os.path.dirname(os.path.abspath(__file__))   # repo_root/api/
+_root = os.path.dirname(_here)                        # repo_root/
+_backend = os.path.join(_root, "backend")             # repo_root/backend/
+if _backend not in sys.path:
+    sys.path.insert(0, _backend)
 
-    headers_raw = scope.get("headers", [])
-    headers = {k.decode(errors="replace"): v.decode(errors="replace") for k, v in headers_raw}
-
-    body = json.dumps({
-        "scope_path":   scope.get("path", "__missing__"),
-        "raw_path":     scope.get("raw_path", b"__missing__").decode(errors="replace"),
-        "query_string": scope.get("query_string", b"").decode(),
-        "method":       scope.get("method", ""),
-        "headers":      headers,
-    }, indent=2).encode()
-
-    await send({
-        "type": "http.response.start",
-        "status": 200,
-        "headers": [
-            (b"content-type", b"application/json"),
-            (b"access-control-allow-origin", b"*"),
-            (b"content-length", str(len(body)).encode()),
-        ],
-    })
-    await send({
-        "type": "http.response.body",
-        "body": body,
-        "more_body": False,
-    })
+from app.main import app  # noqa: E402  — this IS the Vercel entrypoint
