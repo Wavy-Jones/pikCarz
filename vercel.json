@@ -5,7 +5,26 @@
     }
   },
   "routes": [
-    { "src": "/api/(?<rest>.*)", "dest": "/api/index?__path=$rest" },
+    { "src": "/api/test",                       "dest": "/api/index?__path=test" },
+    { "src": "/api/auth/login",                 "dest": "/api/index?__path=auth/login" },
+    { "src": "/api/auth/register",              "dest": "/api/index?__path=auth/register" },
+    { "src": "/api/auth/me",                    "dest": "/api/index?__path=auth/me" },
+    { "src": "/api/auth/logout",                "dest": "/api/index?__path=auth/logout" },
+    { "src": "/api/auth/refresh",               "dest": "/api/index?__path=auth/refresh" },
+    { "src": "/api/auth/change-password",       "dest": "/api/index?__path=auth/change-password" },
+    { "src": "/api/auth/forgot-password",       "dest": "/api/index?__path=auth/forgot-password" },
+    { "src": "/api/auth/reset-password",        "dest": "/api/index?__path=auth/reset-password" },
+    { "src": "/api/auth/update-profile",        "dest": "/api/index?__path=auth/update-profile" },
+    { "src": "/api/vehicles",                   "dest": "/api/index?__path=vehicles" },
+    { "src": "/api/vehicles/(.*)",              "dest": "/api/index?__path=vehicles/$1" },
+    { "src": "/api/admin/(.*)",                 "dest": "/api/index?__path=admin/$1" },
+    { "src": "/api/subscriptions/(.*)",         "dest": "/api/index?__path=subscriptions/$1" },
+    { "src": "/api/favourites(.*)",             "dest": "/api/index?__path=favourites$1" },
+    { "src": "/api/search-alerts(.*)",          "dest": "/api/index?__path=search-alerts$1" },
+    { "src": "/api/analytics/(.*)",             "dest": "/api/index?__path=analytics/$1" },
+    { "src": "/api/referrals(.*)",              "dest": "/api/index?__path=referrals$1" },
+    { "src": "/api/contact(.*)",                "dest": "/api/index?__path=contact$1" },
+    { "src": "/api/(.*)",                       "dest": "/api/index?__path=$1" },
     { "handle": "filesystem" }
   ]
 }
