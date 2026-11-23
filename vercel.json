@@ -4,7 +4,8 @@
       "includeFiles": "backend/**"
     }
   },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index?__path=$1" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index?__path=$1" },
+    { "handle": "filesystem" }
   ]
 }
