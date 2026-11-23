@@ -1,16 +1,19 @@
 """
-Vercel ASGI entrypoint for PikCarz API (root-level deployment).
-The variable MUST be named 'app' for Vercel's Python runtime to detect it.
+Vercel ASGI entrypoint for PikCarz.
 
-ROOT CAUSE: Vercel rewrites set scope["path"] to the DESTINATION ("/api/index"),
-not the original URL ("/api/auth/login"). FastAPI never sees the real path.
-FIX: VercelPathFix middleware reads scope["raw_path"] (which preserves the
-original URL) and overwrites scope["path"] before FastAPI routes the request.
+ROOT CAUSE: Vercel rewrites set scope["path"] to the destination ("/api/index").
+raw_path is also the destination — no way to recover the original URL from scope alone.
+
+FIX: vercel.json rewrite passes the original path as a query param:
+  source: /api/(.*)  →  destination: /api/index?__path=$1
+The VercelPathFix middleware reads __path from query_string, sets scope["path"]
+back to the real URL, and strips __path so FastAPI never sees it.
 """
 import os
 import sys
+from urllib.parse import parse_qs, urlencode
 
-# Robust backend/ discovery
+# ── backend/ path setup ──────────────────────────────────────────────────────
 _this_file = os.path.abspath(__file__)
 _api_dir   = os.path.dirname(_this_file)
 _root_dir  = os.path.dirname(_api_dir)
@@ -30,25 +33,27 @@ for _candidate in [
 
 class VercelPathFix:
     """
-    Vercel rewrites deliver scope["path"] = "/api/index" for every request,
-    regardless of the actual URL the browser requested. The original URL is
-    preserved in scope["raw_path"] (bytes). This middleware copies raw_path
-    back into scope["path"] so FastAPI routes work correctly.
+    vercel.json rewrites /api/<anything> to /api/index?__path=<anything>.
+    This middleware reads __path, restores scope["path"] = /api/<anything>,
+    and removes __path from the query string before FastAPI sees the request.
     """
+
     def __init__(self, inner):
         self.inner = inner
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            raw = scope.get("raw_path")
-            if raw:
-                # raw_path is bytes like b"/api/auth/login" or b"/api/auth/login?foo=bar"
-                fixed = raw.decode("utf-8", "replace").split("?")[0]
-                if fixed:
-                    scope = {**scope, "path": fixed}
+            qs_str = scope.get("query_string", b"").decode("utf-8", "replace")
+            params = parse_qs(qs_str, keep_blank_values=True)
+            path_parts = params.pop("__path", None)
+            if path_parts:
+                original_path = "/api/" + path_parts[0]
+                new_qs = urlencode(params, doseq=True).encode("utf-8")
+                scope = {**scope, "path": original_path, "query_string": new_qs}
         await self.inner(scope, receive, send)
 
 
+# ── load the real app ────────────────────────────────────────────────────────
 _import_error = None
 try:
     from app.main import app as _base_app
@@ -57,20 +62,24 @@ try:
 except Exception as _exc:
     import traceback
     _import_error = traceback.format_exc()
-    # Diagnostic fallback: expose the exact import error so we can fix it
-    from fastapi import FastAPI
+    from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
+
     _fallback = FastAPI()
 
-    @_fallback.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
-    async def _error_handler(full_path: str = ""):
+    @_fallback.api_route(
+        "/{full_path:path}",
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    )
+    async def _error_handler(request: Request, full_path: str = ""):
         return JSONResponse(
             status_code=500,
             content={
                 "error": "startup_import_failed",
                 "traceback": _import_error,
+                "scope_path": request.scope.get("path"),
+                "query_string": request.scope.get("query_string", b"").decode(),
                 "sys_path_0": sys.path[0] if sys.path else None,
-                "backend_exists": os.path.isdir(os.path.join(_root_dir, "backend")),
             },
         )
 
