@@ -1,17 +1,13 @@
 """
 Vercel ASGI entrypoint for PikCarz.
 
-ROOT CAUSE: Vercel rewrites set scope["path"] to the destination ("/api/index").
-raw_path is also the destination — no way to recover the original URL from scope alone.
-
-FIX: vercel.json rewrite passes the original path as a query param:
-  source: /api/(.*)  →  destination: /api/index?__path=$1
-The VercelPathFix middleware reads __path from query_string, sets scope["path"]
-back to the real URL, and strips __path so FastAPI never sees it.
+FIX: routes config passes the original path as ?__path=<rest>.
+VercelPathFix reads it and restores scope["path"] before FastAPI routes.
+Logging added so Vercel runtime logs show exactly what the function receives.
 """
 import os
 import sys
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import unquote
 
 # ── backend/ path setup ──────────────────────────────────────────────────────
 _this_file = os.path.abspath(__file__)
@@ -33,9 +29,9 @@ for _candidate in [
 
 class VercelPathFix:
     """
-    vercel.json rewrites /api/<anything> to /api/index?__path=<anything>.
-    This middleware reads __path, restores scope["path"] = /api/<anything>,
-    and removes __path from the query string before FastAPI sees the request.
+    Routes config: /api/(?<rest>.*) -> /api/index?__path=$rest
+    This middleware reads __path from query_string and sets scope["path"]
+    to the real requested URL before FastAPI routes the request.
     """
 
     def __init__(self, inner):
@@ -43,13 +39,32 @@ class VercelPathFix:
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            qs_str = scope.get("query_string", b"").decode("utf-8", "replace")
-            params = parse_qs(qs_str, keep_blank_values=True)
-            path_parts = params.pop("__path", None)
-            if path_parts:
-                original_path = "/api/" + path_parts[0]
-                new_qs = urlencode(params, doseq=True).encode("utf-8")
+            qs = scope.get("query_string", b"").decode("utf-8", "replace")
+            current_path = scope.get("path", "")
+
+            # Simple string parsing — no library dependencies
+            path_val = None
+            remaining_parts = []
+            for part in qs.split("&"):
+                if part.startswith("__path="):
+                    path_val = unquote(part[len("__path="):])
+                elif part:
+                    remaining_parts.append(part)
+
+            print(
+                f"[VFIX] scope_path={current_path!r} "
+                f"qs={qs!r} "
+                f"path_val={path_val!r}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+            if path_val is not None:
+                original_path = "/api/" + path_val
+                new_qs = "&".join(remaining_parts).encode("utf-8")
                 scope = {**scope, "path": original_path, "query_string": new_qs}
+                print(f"[VFIX] restored path={original_path!r}", file=sys.stderr, flush=True)
+
         await self.inner(scope, receive, send)
 
 
@@ -57,11 +72,13 @@ class VercelPathFix:
 _import_error = None
 try:
     from app.main import app as _base_app
+    print(f"[VFIX] app loaded OK: {type(_base_app)}", file=sys.stderr, flush=True)
     app = VercelPathFix(_base_app)
 
 except Exception as _exc:
     import traceback
     _import_error = traceback.format_exc()
+    print(f"[VFIX] IMPORT FAILED:\n{_import_error}", file=sys.stderr, flush=True)
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
 
