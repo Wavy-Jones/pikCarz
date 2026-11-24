@@ -1,14 +1,36 @@
 """
-PikCarz API — Vercel serverless entry point.
-
-Vercel's file-based routing (no custom 'routes') calls this file for every
-/api/** request and sets scope["path"] to the ORIGINAL requested URL, so
-FastAPI can match routes normally without any path-rewriting middleware.
+DEFINITIVE DIAGNOSTIC — bare ASGI, always returns 200 with scope JSON.
+This CANNOT return {"detail":"Not Found"} — if you see that, another file is responding.
 """
-import sys
-import os
+import json
 
-# Add backend/ to the Python path so `from app.main import app` works.
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"))
 
-from app.main import app  # noqa: F401  — Vercel looks for `app`
+async def app(scope, receive, send):
+    if scope.get("type") != "http":
+        return
+
+    hdrs = {
+        k.decode("utf-8", "replace"): v.decode("utf-8", "replace")
+        for k, v in scope.get("headers", [])
+    }
+
+    body = json.dumps({
+        "served_by":    "[...path].py BARE ASGI",
+        "path":         scope.get("path"),
+        "raw_path":     scope.get("raw_path", b"").decode("utf-8", "replace"),
+        "query_string": scope.get("query_string", b"").decode("utf-8", "replace"),
+        "root_path":    scope.get("root_path", ""),
+        "method":       scope.get("method"),
+        "headers":      hdrs,
+    }, indent=2).encode()
+
+    await send({
+        "type": "http.response.start",
+        "status": 200,
+        "headers": [
+            (b"content-type", b"application/json"),
+            (b"content-length", str(len(body)).encode()),
+            (b"access-control-allow-origin", b"*"),
+        ],
+    })
+    await send({"type": "http.response.body", "body": body})
