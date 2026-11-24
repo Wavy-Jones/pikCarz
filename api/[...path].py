@@ -1,9 +1,23 @@
 """
-This file exists only to satisfy Vercel's build scan.
-All routing is handled by api/index.py via vercel.json routes.
-This module re-exports the same diagnostic/real app so that
-whichever file Vercel actually invokes, the right handler runs.
+Diagnostic catch-all — returns raw scope info for every request.
+Tells us: which file Vercel is actually calling, what scope["path"] is,
+and whether scope["query_string"] carries the __path= param.
 """
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from index import app  # noqa: F401  re-export
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+@app.api_route(
+    "/{full_path:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+)
+async def catch_all(request: Request, full_path: str = ""):
+    return JSONResponse({
+        "served_by":        "[...path].py",
+        "url":              str(request.url),
+        "scope_path":       request.scope.get("path"),
+        "query_string":     request.scope.get("query_string", b"").decode(),
+        "query_params":     dict(request.query_params),
+        "headers":          dict(request.headers),
+    })
