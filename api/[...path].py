@@ -1,36 +1,31 @@
 """
-DEFINITIVE DIAGNOSTIC — bare ASGI, always returns 200 with scope JSON.
-This CANNOT return {"detail":"Not Found"} — if you see that, another file is responding.
+Vercel catch-all for /api/** — wraps the real FastAPI app with a path fix.
+Vercel strips the /api/ prefix when routing to api/[...path].py, so
+scope["path"] arrives as e.g. "/test" instead of "/api/test".
+This middleware prepends "/api" so FastAPI routes match correctly.
 """
-import json
+import sys
+import os
+
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"),
+)
+
+from app.main import app as _fastapi_app
 
 
-async def app(scope, receive, send):
-    if scope.get("type") != "http":
-        return
+class VercelPathFix:
+    def __init__(self, app):
+        self.app = app
 
-    hdrs = {
-        k.decode("utf-8", "replace"): v.decode("utf-8", "replace")
-        for k, v in scope.get("headers", [])
-    }
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http":
+            scope = dict(scope)
+            path = scope.get("path", "")
+            if not path.startswith("/api"):
+                scope["path"] = "/api" + path
+        await self.app(scope, receive, send)
 
-    body = json.dumps({
-        "served_by":    "[...path].py BARE ASGI",
-        "path":         scope.get("path"),
-        "raw_path":     scope.get("raw_path", b"").decode("utf-8", "replace"),
-        "query_string": scope.get("query_string", b"").decode("utf-8", "replace"),
-        "root_path":    scope.get("root_path", ""),
-        "method":       scope.get("method"),
-        "headers":      hdrs,
-    }, indent=2).encode()
 
-    await send({
-        "type": "http.response.start",
-        "status": 200,
-        "headers": [
-            (b"content-type", b"application/json"),
-            (b"content-length", str(len(body)).encode()),
-            (b"access-control-allow-origin", b"*"),
-        ],
-    })
-    await send({"type": "http.response.body", "body": body})
+app = VercelPathFix(_fastapi_app)
