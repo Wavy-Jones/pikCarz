@@ -728,7 +728,7 @@
         <button class="btn-edit-v" onclick="openEditById(${v.id})">✎ Edit</button>
         ${isPending ? `<button class="btn-approve" onclick="approveVehicle(${v.id})">✓ Approve</button>` : ''}
         ${isPending ? `<button class="btn-reject"  onclick="rejectVehicle(${v.id})">✗ Reject</button>`  : ''}
-        ${v.status === 'sold' || v.status === 'rejected' ? `<button class="btn-relist" onclick="relistVehicle(${v.id})">🔄 Relist</button>` : ''}
+        ${v.status !== 'pending' ? `<button class="btn-relist" onclick="relistVehicle(${v.id})">🔄 Relist</button>` : ''}
         <button class="btn-del-v" onclick="adminDeleteVehicle(${v.id})">🗑 Delete</button>
       </div>`;
     return `
