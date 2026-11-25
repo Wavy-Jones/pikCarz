@@ -1,48 +1,35 @@
 """
-MINIMAL TEST — bare FastAPI, no backend imports.
-If /api/test returns {"status":"routing_works"}, routing is fine
-and the problem is in the backend import chain.
-If it still returns {"detail":"Not Found"}, the path Vercel passes
-does NOT start with /api and we need to see the raw scope.
+PURE BARE ASGI — no FastAPI, no imports.
+Returns 200 with the raw scope as JSON for ANY request.
+If this still returns {"detail":"Not Found"}, our function is NOT being called.
 """
 import json
-from fastapi import FastAPI, Request
-
-_app = FastAPI()
 
 
-@_app.get("/api/test")
-async def test_route(request: Request):
-    return {
-        "status": "routing_works",
-        "scope_path": request.scope.get("path"),
-        "root_path": request.scope.get("root_path", ""),
-        "url_path": str(request.url.path),
+async def app(scope, receive, send):
+    if scope.get("type") != "http":
+        return
+
+    hdrs = {
+        k.decode("utf-8", "replace"): v.decode("utf-8", "replace")
+        for k, v in scope.get("headers", [])
     }
+    body = json.dumps({
+        "served_by": "api/[...path].py BARE ASGI v2",
+        "path": scope.get("path"),
+        "raw_path": scope.get("raw_path", b"").decode("utf-8", "replace"),
+        "root_path": scope.get("root_path", ""),
+        "method": scope.get("method"),
+        "headers": hdrs,
+    }, indent=2).encode()
 
-
-@_app.get("/test")
-async def test_no_prefix(request: Request):
-    return {
-        "status": "routing_works_no_prefix",
-        "scope_path": request.scope.get("path"),
-        "root_path": request.scope.get("root_path", ""),
-    }
-
-
-# Bare ASGI wrapper — logs the raw scope path before FastAPI sees it
-class ScopeLogger:
-    def __init__(self, inner):
-        self.inner = inner
-
-    async def __call__(self, scope, receive, send):
-        if scope.get("type") == "http":
-            print(
-                f"[pikcarz-raw] path={scope.get('path')!r}"
-                f" root_path={scope.get('root_path', '')!r}",
-                flush=True,
-            )
-        await self.inner(scope, receive, send)
-
-
-app = ScopeLogger(_app)
+    await send({
+        "type": "http.response.start",
+        "status": 200,
+        "headers": [
+            (b"content-type", b"application/json"),
+            (b"content-length", str(len(body)).encode()),
+            (b"access-control-allow-origin", b"*"),
+        ],
+    })
+    await send({"type": "http.response.body", "body": body})
