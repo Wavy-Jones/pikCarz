@@ -1,44 +1,60 @@
 """
 Vercel ASGI entrypoint for PikCarz API.
 
-How it works:
-  backend/vercel.json rewrites every request:
-    /(.*) → /api/index?__vp=$1
-  So /api/auth/login becomes /api/index?__vp=api/auth/login.
-  We recover the original path from __vp and pass the fixed scope to FastAPI.
-
-Vercel requires the entrypoint variable to be named 'app' (not 'handler').
+Vercel custom 'routes' rewrites scope["path"] to the destination path,
+so we wrap the FastAPI app to restore the original URL from the
+x-matched-path or x-invoke-path headers that Vercel injects.
 """
 import os
 import sys
-from urllib.parse import parse_qs
 
-# Ensure 'backend/' is on sys.path so `from app.main import app` resolves
-_here = os.path.dirname(os.path.abspath(__file__))          # backend/api/
-_backend = os.path.dirname(_here)                            # backend/
+_here = os.path.dirname(os.path.abspath(__file__))   # backend/api/
+_backend = os.path.dirname(_here)                     # backend/
 if _backend not in sys.path:
     sys.path.insert(0, _backend)
 
 from app.main import app as _fastapi_app  # noqa: E402
 
 
-async def app(scope, receive, send):
-    """ASGI entrypoint — recover original path from __vp then delegate to FastAPI."""
-    if scope["type"] == "http":
-        qs_raw = scope.get("query_string", b"")
-        params = parse_qs(qs_raw.decode("utf-8", errors="replace"))
+class VercelPathRestore:
+    """
+    Vercel custom routes set scope['path'] to the destination (/api/index.py).
+    The real request path is preserved in the 'x-matched-path' or
+    'x-invoke-path' or 'x-forwarded-uri' request headers.
+    This middleware restores scope['path'] before FastAPI sees it.
+    """
 
-        if "__vp" in params:
-            original_path = "/" + params["__vp"][0].lstrip("/")
-            # Rebuild query string without __vp
-            remaining = "&".join(
-                f"{k}={v[0]}" for k, v in params.items() if k != "__vp"
-            )
-            scope = {
-                **scope,
-                "path": original_path,
-                "raw_path": original_path.encode("utf-8"),
-                "query_string": remaining.encode("utf-8"),
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http":
+            scope = dict(scope)
+
+            # Build a header lookup (lowercase keys)
+            hdrs = {
+                k.decode("utf-8", "replace").lower(): v.decode("utf-8", "replace")
+                for k, v in scope.get("headers", [])
             }
 
-    await _fastapi_app(scope, receive, send)
+            original = (
+                hdrs.get("x-matched-path")
+                or hdrs.get("x-invoke-path")
+                or hdrs.get("x-forwarded-uri")
+                or hdrs.get("x-original-url")
+            )
+
+            if original:
+                # Strip query string if present
+                scope["path"] = original.split("?")[0]
+
+            print(
+                f"[pikcarz] scope_path={scope.get('path')!r}"
+                f"  original_header={original!r}",
+                flush=True,
+            )
+
+        await self.inner(scope, receive, send)
+
+
+app = VercelPathRestore(_fastapi_app)
