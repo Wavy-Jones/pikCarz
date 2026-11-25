@@ -1,8 +1,7 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index?__vp=$1"
+  "functions": {
+    "api/[...path].py": {
+      "includeFiles": "app/**"
     }
-  ]
+  }
 }
