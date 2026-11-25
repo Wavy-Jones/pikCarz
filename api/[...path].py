@@ -1,61 +1,48 @@
 """
-Vercel catch-all for /api/** with diagnostic logging.
+MINIMAL TEST — bare FastAPI, no backend imports.
+If /api/test returns {"status":"routing_works"}, routing is fine
+and the problem is in the backend import chain.
+If it still returns {"detail":"Not Found"}, the path Vercel passes
+does NOT start with /api and we need to see the raw scope.
 """
-import sys
-import os
 import json
+from fastapi import FastAPI, Request
 
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"),
-)
-
-try:
-    from app.main import app as _fastapi_app
-    IMPORT_OK = True
-    IMPORT_ERROR = None
-except Exception as _exc:
-    import traceback as _tb
-    IMPORT_OK = False
-    IMPORT_ERROR = _tb.format_exc()
-    _fastapi_app = None
+_app = FastAPI()
 
 
-class VercelPathFix:
-    def __init__(self, inner_app):
-        self.inner_app = inner_app
+@_app.get("/api/test")
+async def test_route(request: Request):
+    return {
+        "status": "routing_works",
+        "scope_path": request.scope.get("path"),
+        "root_path": request.scope.get("root_path", ""),
+        "url_path": str(request.url.path),
+    }
+
+
+@_app.get("/test")
+async def test_no_prefix(request: Request):
+    return {
+        "status": "routing_works_no_prefix",
+        "scope_path": request.scope.get("path"),
+        "root_path": request.scope.get("root_path", ""),
+    }
+
+
+# Bare ASGI wrapper — logs the raw scope path before FastAPI sees it
+class ScopeLogger:
+    def __init__(self, inner):
+        self.inner = inner
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            scope = dict(scope)
-            original_path = scope.get("path", "")
-            if not original_path.startswith("/api"):
-                scope["path"] = "/api" + original_path
-            # This line appears in Vercel function logs
             print(
-                f"[pikcarz] import_ok={IMPORT_OK}"
-                f"  original_path={original_path!r}"
-                f"  fixed_path={scope['path']!r}",
+                f"[pikcarz-raw] path={scope.get('path')!r}"
+                f" root_path={scope.get('root_path', '')!r}",
                 flush=True,
             )
-
-        if not IMPORT_OK:
-            body = json.dumps(
-                {"error": "import_failed", "detail": IMPORT_ERROR}
-            ).encode()
-            await send({
-                "type": "http.response.start",
-                "status": 500,
-                "headers": [
-                    (b"content-type", b"application/json"),
-                    (b"content-length", str(len(body)).encode()),
-                    (b"access-control-allow-origin", b"*"),
-                ],
-            })
-            await send({"type": "http.response.body", "body": body})
-            return
-
-        await self.inner_app(scope, receive, send)
+        await self.inner(scope, receive, send)
 
 
-app = VercelPathFix(_fastapi_app)
+app = ScopeLogger(_app)
